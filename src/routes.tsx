@@ -52,15 +52,36 @@ type ProfileContext = {
   }
 }
 
-function Brand() {
+function Brand({ showSystemName = false }: { showSystemName?: boolean }) {
   return (
-    <div className="min-w-0">
-      <p className="text-sm font-semibold leading-5">
-        Our Lady of Fatima University
-      </p>
-      <p className="mt-0.5 text-xs leading-5 text-[#61726a]">
-        College of Computer Studies
-      </p>
+    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <img
+        src="/logos/olfu.png"
+        alt="Our Lady of Fatima University logo"
+        width={64}
+        height={64}
+        className="h-10 w-10 shrink-0 object-contain sm:h-16 sm:w-16"
+      />
+      <div className="min-w-0 flex-1 text-center">
+        <p className="text-sm font-semibold leading-5">
+          Our Lady of Fatima University
+        </p>
+        <p className="mt-0.5 text-xs leading-5 text-[#61726a]">
+          College of Computer Studies
+        </p>
+        {showSystemName && (
+          <p className="mt-3 text-xs text-[#61726a]">
+            Competition tabulation system
+          </p>
+        )}
+      </div>
+      <img
+        src="/logos/ccs.png"
+        alt="College of Computer Studies logo"
+        width={64}
+        height={64}
+        className="h-10 w-10 shrink-0 object-contain sm:h-16 sm:w-16"
+      />
     </div>
   )
 }
@@ -81,11 +102,8 @@ function AuthLayout({ children }: { children: ReactNode }) {
     <main className="auth-page min-h-screen bg-[#f1efe6] text-[#17251d]">
       <SetupNotice />
       <div className="mx-auto w-full max-w-[440px] px-5 py-6 sm:py-12">
-        <header className="border-b border-[#17251d]/15 pb-5">
-          <Brand />
-          <p className="mt-3 text-xs text-[#61726a]">
-            Competition tabulation system
-          </p>
+        <header className="border-b border-[#17251d]/15 pb-5 text-center">
+          <Brand showSystemName />
         </header>
         <section className="pt-6">{children}</section>
       </div>

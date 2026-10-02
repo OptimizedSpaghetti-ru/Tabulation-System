@@ -40,22 +40,6 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
   .workspace header > div { flex-wrap: wrap; gap: 12px; }
 }
 
-.contestant-photo-viewer::backdrop { background: rgb(15 23 42 / 70%); }
-.contestant-photo-viewer[open] { animation: contestant-photo-enlarge 220ms cubic-bezier(0.16, 1, 0.3, 1); }
-.contestant-photo-viewer[open]::backdrop { animation: contestant-photo-backdrop 180ms ease-out; }
-@keyframes contestant-photo-enlarge {
-  from { opacity: 0; transform: scale(.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-@keyframes contestant-photo-backdrop {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .contestant-photo-viewer[open] { animation: contestant-photo-backdrop 100ms ease-out; }
-  .contestant-photo-viewer[open]::backdrop { animation-duration: 100ms; }
-}
-
 /* Judge score controls: measured rails and tactile handles. */
 .judge-scoring .score-contestant { border-radius: 8px; }
 .judge-scoring .score-number { border-radius: 6px; font-variant-numeric: tabular-nums; }
@@ -109,3 +93,80 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .score-ticks { display: flex; justify-content: space-between; margin: -4px 10px 5px; }
 .score-ticks span { width: 1px; height: 4px; background: #9ba9a1; }
 .score-ticks span:first-child, .score-ticks span:last-child { height: 6px; background: #61726a; }
+
+/* Shared interaction motion: feedback without changing layout or control behavior. */
+:where(.workspace, .auth-page, .public-results) :is(button, a[href], summary, select, input[type="checkbox"], input[type="radio"]) {
+  transition: scale 130ms cubic-bezier(0.16, 1, 0.3, 1), background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out, opacity 140ms ease-out;
+}
+:where(.workspace, .auth-page, .public-results) :is(button, a[href], summary, input[type="checkbox"], input[type="radio"]):not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]):not([aria-busy="true"] *):active {
+  scale: .98;
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(.workspace, .auth-page, .public-results) :is(button, a[href], summary):not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]):not([aria-busy="true"] *):hover {
+    opacity: .92;
+  }
+}
+.motion-modal { background: transparent; isolation: isolate; }
+.motion-modal::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgb(0 0 0 / 40%);
+  animation: surface-fade-in 180ms ease-out both;
+}
+.motion-modal > * {
+  animation: surface-pop-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top center;
+}
+.motion-modal[data-motion-state="closed"] { pointer-events: none; }
+.motion-modal[data-motion-state="closed"]::before { animation: surface-fade-out 150ms ease-in both; }
+.motion-modal[data-motion-state="closed"] > * { animation: surface-pop-out 150ms ease-in both; }
+.motion-reveal { animation: surface-reveal-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.motion-reveal[data-motion-state="closed"] { animation: surface-fade-out 150ms ease-in both; pointer-events: none; }
+details[open] > :not(summary) { animation: surface-reveal-in 160ms ease-out; }
+@keyframes surface-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes surface-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes surface-pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes surface-pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(4px) scale(.98); }
+}
+@keyframes surface-reveal-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+/* Native dialog keeps browser focus trapping, Escape and focus restoration. */
+.contestant-photo-viewer {
+  opacity: 0;
+  transform: translateY(4px) scale(.98);
+  transition: opacity 150ms ease-in, transform 150ms ease-in, display 150ms allow-discrete, overlay 150ms allow-discrete;
+}
+.contestant-photo-viewer[open] {
+  opacity: 1;
+  transform: none;
+  transition: opacity 200ms ease-out, transform 200ms cubic-bezier(0.16, 1, 0.3, 1), display 200ms allow-discrete, overlay 200ms allow-discrete;
+}
+.contestant-photo-viewer::backdrop {
+  background: rgb(15 23 42 / 70%);
+  opacity: 0;
+  transition: opacity 150ms ease-in, display 150ms allow-discrete, overlay 150ms allow-discrete;
+}
+.contestant-photo-viewer[open]::backdrop { opacity: 1; }
+@starting-style {
+  .contestant-photo-viewer[open] { opacity: 0; transform: translateY(6px) scale(.98); }
+  .contestant-photo-viewer[open]::backdrop { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.workspace, .auth-page, .public-results) :is(button, a[href], summary, select, input[type="checkbox"], input[type="radio"]) { transition: none; scale: 1; }
+  .motion-modal::before, .motion-modal > *, .motion-reveal, details[open] > :not(summary) { animation: none !important; }
+  .contestant-photo-viewer, .contestant-photo-viewer[open], .contestant-photo-viewer::backdrop { transition: none; transform: none; }
+}
+:where(.workspace, .auth-page, .public-results) :is(button, select, input):is(:disabled, [aria-disabled="true"], [aria-busy="true"]),
+:where(.workspace, .auth-page, .public-results) [aria-busy="true"] :is(button, select, input) { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(.workspace, .auth-page, .public-results) :is(button, a[href], summary, input[type="checkbox"], input[type="radio"]):active { scale: 1 !important; }
+}

@@ -1,5 +1,5 @@
-const adminPages = ["Dashboard", "Competition", "Contestants", "Judges", "Assign Judges", "Criteria", "Tabulation", "Rankings", "Winners", "Results", "Audit Logs"]
-const judgePages = ["Dashboard", "Competition", "Criteria", "Scores", "Rankings", "Winners", "Results"]
+const adminPages = ["Dashboard", "Competition", "Contestants", "Judges", "Assign Judges", "Criteria", "Tabulation", "Results", "Audit Logs"]
+const judgePages = ["Dashboard", "Competition", "Criteria", "Scores", "Results"]
 
 export function navigationForRole(role: string): string[] {
   if (role === "admin") return adminPages

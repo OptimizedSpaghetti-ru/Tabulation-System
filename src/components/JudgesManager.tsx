@@ -1,3 +1,4 @@
+import AnimatedPresence from "./AnimatedPresence"
 import { getDefaultEventId } from "../lib/default-event"
 import { FormEvent, useEffect, useState } from "react"
 import { authEmailToUsername, isValidUsername, supabase } from "../lib/supabase"
@@ -231,6 +232,7 @@ export default function JudgesManager({
         )}
       </div>
 
+      <AnimatedPresence kind="reveal">
       {isAdmin && !isAssignMode && showAddJudge && (
         <section
           id="add-judge-form"
@@ -352,6 +354,7 @@ export default function JudgesManager({
           </form>
         </section>
       )}
+      </AnimatedPresence>
 
       {error && (
         <p

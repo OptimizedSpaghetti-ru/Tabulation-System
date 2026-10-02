@@ -26,7 +26,7 @@ export default function ResultsManager({
   viewMode = "tabulation",
 }: {
   isAdmin: boolean
-  viewMode?: "tabulation" | "rankings" | "winners" | "results"
+  viewMode?: "tabulation" | "results"
 }) {
   const [events, setEvents] = useState<EventItem[]>([])
   const [selectedEventId, setSelectedEventId] = useState("")
@@ -162,11 +162,7 @@ export default function ResultsManager({
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#17251d]/20 pb-5">
         <div>
           <h1 className="font-sans text-[28px] font-semibold leading-9 tracking-[-.02em]">
-            {viewMode === "winners"
-              ? "Official Winners"
-              : viewMode === "rankings"
-                ? "Competition Rankings"
-                : "Official Tabulation & Results"}
+            {viewMode === "results" ? "Results" : "Official Tabulation & Results"}
           </h1>
         </div>
         {isAdmin && (

@@ -67,8 +67,7 @@ function PhotoViewer({
           }
         }}
       >
-        {open && (
-          <>
+        <>
             <div className="flex items-center justify-between gap-4 px-4 py-3">
               <h2
                 id={titleId}
@@ -102,8 +101,7 @@ function PhotoViewer({
               alt={`Enlarged photo of ${name}`}
               className="block max-h-[calc(100dvh-7rem)] max-w-full w-auto mx-auto object-contain"
             />
-          </>
-        )}
+        </>
       </dialog>
     </>
   )

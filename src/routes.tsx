@@ -4,10 +4,11 @@ import {
   Navigate,
   NavLink,
   Outlet,
+  useLocation,
   useNavigate,
   useOutletContext,
 } from "react-router"
-import { FormEvent, ReactNode, useEffect, useState } from "react"
+import { FormEvent, ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react"
 import {
   isSupabaseConfigured,
   isValidUsername,
@@ -372,6 +373,34 @@ function Application() {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const pageContentRef = useRef<HTMLElement>(null)
+  const previousPathname = useRef(pathname)
+
+  useLayoutEffect(() => {
+    const changedPage = previousPathname.current !== pathname
+    previousPathname.current = pathname
+    const content = pageContentRef.current
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
+    if (!changedPage || !content || reducedMotion.matches) return
+
+    // Animate the existing outlet container without remounting routed page state.
+    const animation = content.animate(
+      [
+        { opacity: 0.85, transform: "translateY(8px) scale(0.98)", transformOrigin: "top center" },
+        { opacity: 1, transform: "translateY(0) scale(1)", transformOrigin: "top center" },
+      ],
+      { duration: 220, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+    )
+    const stopForReducedMotion = () => {
+      if (reducedMotion.matches) animation.cancel()
+    }
+    reducedMotion.addEventListener("change", stopForReducedMotion)
+    return () => {
+      animation.cancel()
+      reducedMotion.removeEventListener("change", stopForReducedMotion)
+    }
+  }, [pathname])
 
   useEffect(() => {
     async function load() {
@@ -457,7 +486,7 @@ function Application() {
             </button>
           </div>
         </aside>
-        <section className="min-w-0 px-5 py-8 lg:px-7 lg:py-7">
+        <section ref={pageContentRef} className="min-w-0 px-5 py-8 lg:px-7 lg:py-7">
           <Outlet context={{ profile }} />
         </section>
       </div>
@@ -490,10 +519,6 @@ function DataPage() {
     return <ScoresManager isAdmin={isAdmin} profileId={profile?.id} />
   if (title === "Tabulation")
     return <ResultsManager isAdmin={isAdmin} viewMode="tabulation" />
-  if (title === "Rankings")
-    return <ResultsManager isAdmin={isAdmin} viewMode="rankings" />
-  if (title === "Winners")
-    return <ResultsManager isAdmin={isAdmin} viewMode="winners" />
   if (title === "Results")
     return <ResultsManager isAdmin={isAdmin} viewMode="results" />
   if (title === "Audit Logs") return <AuditLogsManager />
@@ -610,6 +635,8 @@ export const router = createBrowserRouter([
       { path: "settings", element: <Navigate to="/app/dashboard" replace /> },
       { path: "events", element: <Navigate to="/app/competition" replace /> },
       { path: "competitions", element: <Navigate to="/app/competition" replace /> },
+      { path: "rankings", element: <Navigate to="/app/results" replace /> },
+      { path: "winners", element: <Navigate to="/app/results" replace /> },
       { path: ":page", Component: DataPage },
     ],
   },

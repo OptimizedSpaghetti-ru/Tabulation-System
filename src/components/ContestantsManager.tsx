@@ -1,3 +1,4 @@
+import AnimatedPresence from "./AnimatedPresence"
 import { getDefaultEventId } from "../lib/default-event"
 import { FormEvent, useEffect, useState } from "react"
 
@@ -393,6 +394,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
         </select>
       </div>
 
+      <AnimatedPresence kind="modal">
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:py-12">
           <div className="w-full max-w-lg border border-[#17251d]/30 bg-[#ffffff] p-6 shadow-xl">
@@ -564,7 +566,9 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </div>
       )}
+      </AnimatedPresence>
 
+      <AnimatedPresence kind="modal">
       {editingPhoto && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:py-12">
           <div
@@ -631,6 +635,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </div>
       )}
+      </AnimatedPresence>
       {loading ? (
         <p className="mt-8 text-xs text-[#61726a]">Loading contestants…</p>
       ) : filtered.length === 0 ? (

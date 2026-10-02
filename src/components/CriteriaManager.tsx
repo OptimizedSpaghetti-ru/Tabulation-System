@@ -1,3 +1,4 @@
+import AnimatedPresence from "./AnimatedPresence"
 import { getDefaultEventId } from "../lib/default-event"
 import { FormEvent, useEffect, useRef, useState } from "react"
 import { supabase } from "../lib/supabase"
@@ -295,6 +296,7 @@ export default function CriteriaManager({
         </div>
       </div>
 
+      <AnimatedPresence kind="modal">
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:py-12">
           <div className="w-full max-w-lg border border-[#17251d]/30 bg-[#ffffff] p-6 shadow-xl">
@@ -406,6 +408,7 @@ export default function CriteriaManager({
           </div>
         </div>
       )}
+      </AnimatedPresence>
 
       {loading || criteriaLoading ? (
         <p className="mt-8 text-xs text-[#61726a]">Loading criteria…</p>

@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-display: "Literata", Georgia, serif;
+  --font-sans: "Instrument Sans", Arial, sans-serif;
+  --font-mono: "Azeret Mono", monospace;
+}
+
+html, body, #root { min-height: 100%; }
+
+body { font-family: var(--font-sans); }
+
+button, input { font: inherit; }
+input[type="number"] { appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { appearance: none; }

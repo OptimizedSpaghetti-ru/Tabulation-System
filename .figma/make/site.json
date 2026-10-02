@@ -1,0 +1,10 @@
+{
+  "description": "Delivers a clean, minimalist interface focused on essential features without excessive icons or AI elements, enhancing user clarity and efficiency.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

@@ -223,10 +223,9 @@ Follow this sequence to test full end-to-end functionality:
 
 1. **Public View**: Open `/results` — verify published verdicts layout and brand header.
 2. **Registration**: Navigate to `/register` — request an account. Verify validation on:
-   - Full name (minimum 2 characters)
    - Unique Username (3–30 alphanumeric / underscore characters, e.g. `admin`)
-   - Strong password requirements
-   - Unique Judge / Employee ID
+   - Strong password requirements (8+ chars with uppercase, lowercase, number, special char)
+   - Password confirmation
 3. **Admin Approval**: In Supabase SQL or as an existing Admin under `/app/judges`, approve the pending judge.
 4. **Sign In**: Log into `/login` with active credentials.
 5. **Create Competition**: Go to `/app/competitions` and create an academic year competition (e.g. `CCS Week 2026`).

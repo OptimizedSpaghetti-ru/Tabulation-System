@@ -191,11 +191,9 @@ function Login() {
 
 function Register() {
   const [form, setForm] = useState({
-    name: "",
     username: "",
     password: "",
     confirm: "",
-    judgeId: "",
   });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -204,19 +202,13 @@ function Register() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     setMessage("");
-    const name = form.name.trim().replace(/\s+/g, " ");
     const username = form.username.trim().toLowerCase();
-    const judgeId = form.judgeId.trim();
 
-    if (!/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(name))
-      return setMessage("Full name must contain 2–80 letters and valid name characters.");
     if (!isValidUsername(username))
       return setMessage("Username must be 3–30 characters and can only contain letters, numbers, underscores, dots, or hyphens.");
     if (!passwordRule.test(form.password))
       return setMessage("Password needs 8+ characters with uppercase, lowercase, number, and special character.");
     if (form.password !== form.confirm) return setMessage("Password confirmation does not match.");
-    if (!/^[A-Za-z0-9/_-]{3,40}$/.test(judgeId))
-      return setMessage("Judge ID must use 3–40 letters, numbers, slash, underscore, or hyphen.");
     if (!supabase) return setMessage("Supabase connection is required before registration can be used.");
 
     setLoading(true);
@@ -225,9 +217,8 @@ function Register() {
       password: form.password,
       options: {
         data: {
-          full_name: name,
           username: username,
-          judge_id: judgeId,
+          full_name: username,
         },
       },
     });
@@ -248,9 +239,7 @@ function Register() {
         <p className="mt-3 text-sm leading-6 text-[#61726a]">
           Your registration is reviewed before any event is assigned.
         </p>
-        <div className="mt-7 grid gap-5 sm:grid-cols-2">
-          <Field label="Full name" value={form.name} onChange={set("name")} />
-          <Field label="Judge / Employee ID" value={form.judgeId} onChange={set("judgeId")} />
+        <div className="mt-7 space-y-4">
           <Field
             label="Username"
             placeholder="e.g. jdelacruz"
@@ -259,9 +248,7 @@ function Register() {
             autoComplete="username"
           />
           <Field label="Password" type="password" value={form.password} onChange={set("password")} />
-          <div className="sm:col-span-2">
-            <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} />
-          </div>
+          <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} />
         </div>
         {message && (
           <p role="alert" className="mt-4 border-l-2 border-[#a23b30] bg-[#f3e2dc] px-3 py-2 text-sm text-[#70271f]">

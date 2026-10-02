@@ -189,7 +189,7 @@ export default function CriteriaManager({
                 setShowModal(true);
               }}
               disabled={!selectedEventId || totalWeight >= 100}
-              className="border border-[#124734] bg-[#124734] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1a5b44] disabled:opacity-50"
+              className="border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#394658] disabled:opacity-50"
             >
               + Add Criterion
             </button>
@@ -197,7 +197,7 @@ export default function CriteriaManager({
           {!isLocked && totalWeight === 100 && (
             <button
               onClick={handleLockCriteria}
-              className="border border-[#124734] bg-[#276749] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1f5139]"
+              className="border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#394658]"
             >
               Lock Criteria for Scoring
             </button>
@@ -206,7 +206,7 @@ export default function CriteriaManager({
       </div>
 
       {error && <p className="mt-3 border-l-2 border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
-      {success && <p className="mt-3 border-l-2 border-[#124734] bg-[#dfe8da] p-2 text-xs text-[#124734]">{success}</p>}
+      {success && <p className="mt-3 border-l-2 border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">{success}</p>}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
         <div className="flex items-center gap-3">
@@ -227,11 +227,11 @@ export default function CriteriaManager({
 
         <div className="flex items-center gap-3 font-mono text-xs">
           <span>
-            Total Weight: <b className={totalWeight === 100 ? "text-[#124734]" : "text-[#a23b30]"}>{totalWeight}%</b> / 100%
+            Total Weight: <b className={totalWeight === 100 ? "text-[#2a3441]" : "text-[#a23b30]"}>{totalWeight}%</b> / 100%
           </span>
           <span
             className={`rounded px-2 py-0.5 font-bold uppercase tracking-wider ${
-              isLocked ? "bg-[#dfe8da] text-[#124734]" : "bg-[#fff3cf] text-[#a97b26]"
+              isLocked ? "bg-[#dfe5ec] text-[#2a3441]" : "bg-[#fff3cf] text-[#a97b26]"
             }`}
           >
             {isLocked ? "Locked (Scoring Open)" : "Configurable"}
@@ -312,7 +312,7 @@ export default function CriteriaManager({
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#124734] px-4 py-2 text-xs font-bold text-white hover:bg-[#1a5b44]"
+                  className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658]"
                 >
                   Save Criterion
                 </button>
@@ -325,7 +325,7 @@ export default function CriteriaManager({
       {loading ? (
         <p className="mt-8 font-mono text-xs uppercase tracking-wider text-[#61726a]">Loading criteria…</p>
       ) : criteria.length === 0 ? (
-        <div className="mt-8 border-l-2 border-[#124734] bg-[#e6ece0] p-6">
+        <div className="mt-8 border-l-2 border-[#2a3441] bg-[#e8edf2] p-6">
           <h2 className="font-display text-2xl">No criteria configured yet</h2>
           <p className="mt-2 text-sm text-[#52655c]">
             {isLocked
@@ -336,7 +336,7 @@ export default function CriteriaManager({
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Order</th>
                 <th className="p-3">Criterion</th>
@@ -354,11 +354,11 @@ export default function CriteriaManager({
                     {c.name}
                     {c.description && <p className="text-xs font-normal text-[#61726a]">{c.description}</p>}
                   </td>
-                  <td className="p-3 font-mono font-bold text-[#124734]">{c.weight_percentage}%</td>
+                  <td className="p-3 font-mono font-bold text-[#2a3441]">{c.weight_percentage}%</td>
                   <td className="p-3 font-mono text-xs">{c.max_score}</td>
                   <td className="p-3 font-mono text-xs">
                     {c.is_locked ? (
-                      <span className="text-[#124734]">Locked</span>
+                      <span className="text-[#2a3441]">Locked</span>
                     ) : (
                       <span className="text-[#a97b26]">Draft</span>
                     )}
@@ -376,10 +376,10 @@ export default function CriteriaManager({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="border-t-2 border-[#17251d]/20 bg-[#e6ece0] font-mono text-xs font-bold">
+            <tfoot className="border-t-2 border-[#17251d]/20 bg-[#e8edf2] font-mono text-xs font-bold">
               <tr>
                 <td colSpan={2} className="p-3 uppercase">Total Weight</td>
-                <td className={`p-3 ${totalWeight === 100 ? "text-[#124734]" : "text-[#a23b30]"}`}>
+                <td className={`p-3 ${totalWeight === 100 ? "text-[#2a3441]" : "text-[#a23b30]"}`}>
                   {totalWeight}%
                 </td>
                 <td colSpan={!isLocked ? 3 : 2} className="p-3 text-right font-normal text-[#61726a]">

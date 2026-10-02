@@ -43,7 +43,7 @@ export default function AuditLogsManager() {
         </div>
         <button
           onClick={loadLogs}
-          className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#124734] hover:bg-[#e6ece0]"
+          className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#2a3441] hover:bg-[#e8edf2]"
         >
           Refresh Log
         </button>
@@ -52,14 +52,14 @@ export default function AuditLogsManager() {
       {loading ? (
         <p className="mt-8 font-mono text-xs uppercase tracking-wider text-[#61726a]">Loading audit records…</p>
       ) : logs.length === 0 ? (
-        <div className="mt-8 border-l-2 border-[#124734] bg-[#e6ece0] p-6">
+        <div className="mt-8 border-l-2 border-[#2a3441] bg-[#e8edf2] p-6">
           <h2 className="font-display text-2xl">No Logged Events</h2>
           <p className="mt-2 text-sm text-[#52655c]">Institutional database actions will automatically appear here.</p>
         </div>
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Timestamp</th>
                 <th className="p-3">Action</th>
@@ -77,7 +77,7 @@ export default function AuditLogsManager() {
                     <span
                       className={`inline-block rounded-sm px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${
                         log.action === "insert"
-                          ? "bg-[#dfe8da] text-[#124734]"
+                          ? "bg-[#dfe5ec] text-[#2a3441]"
                           : log.action === "update"
                           ? "bg-[#fff3cf] text-[#a97b26]"
                           : "bg-[#f3e2dc] text-[#a23b30]"

@@ -137,7 +137,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
         {isAdmin && (
           <button
             onClick={() => setShowModal(true)}
-            className="bg-[#124734] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1a5b44]"
+            className="bg-[#2a3441] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#394658]"
           >
             + Add Contestant
           </button>
@@ -255,7 +255,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#124734] px-4 py-2 text-xs font-bold text-white hover:bg-[#1a5b44]"
+                  className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658]"
                 >
                   Save Contestant
                 </button>
@@ -268,7 +268,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
       {loading ? (
         <p className="mt-8 font-mono text-xs uppercase tracking-wider text-[#61726a]">Loading contestants…</p>
       ) : filtered.length === 0 ? (
-        <div className="mt-8 border-l-2 border-[#124734] bg-[#e6ece0] p-6">
+        <div className="mt-8 border-l-2 border-[#2a3441] bg-[#e8edf2] p-6">
           <h2 className="font-display text-2xl">No contestants found</h2>
           <p className="mt-2 text-sm text-[#52655c]">
             {isAdmin ? "Click '+ Add Contestant' to register participants." : "No registered participants for this event."}
@@ -277,7 +277,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Number</th>
                 <th className="p-3">Contestant Name</th>
@@ -289,7 +289,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
             <tbody className="divide-y divide-[#17251d]/10">
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-white/50">
-                  <td className="p-3 font-mono font-bold text-[#124734]">{c.contestant_number}</td>
+                  <td className="p-3 font-mono font-bold text-[#2a3441]">{c.contestant_number}</td>
                   <td className="p-3 font-semibold">
                     {c.full_name}
                     {c.student_id && <span className="ml-2 font-mono text-xs text-[#61726a]">({c.student_id})</span>}
@@ -301,7 +301,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                     {c.event_contestants?.map((ec) => ec.events?.name).filter(Boolean).join(", ") || "—"}
                   </td>
                   <td className="p-3">
-                    <span className="inline-block rounded-sm bg-[#dfe8da] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#124734]">
+                    <span className="inline-block rounded-sm bg-[#dfe5ec] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#2a3441]">
                       {c.status}
                     </span>
                   </td>

@@ -163,7 +163,7 @@ export default function ResultsManager({
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleRecalculate}
-              className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#124734] hover:bg-[#e6ece0]"
+              className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#2a3441] hover:bg-[#e8edf2]"
             >
               Recalculate
             </button>
@@ -171,7 +171,7 @@ export default function ResultsManager({
               <button
                 onClick={handleFinalizeAndPublish}
                 disabled={results.length === 0}
-                className="bg-[#124734] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1a5b44] disabled:opacity-50"
+                className="bg-[#2a3441] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#394658] disabled:opacity-50"
               >
                 Finalize & Publish Verdicts
               </button>
@@ -188,7 +188,7 @@ export default function ResultsManager({
       </div>
 
       {error && <p className="mt-3 border-l-2 border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
-      {success && <p className="mt-3 border-l-2 border-[#124734] bg-[#dfe8da] p-2 text-xs text-[#124734]">{success}</p>}
+      {success && <p className="mt-3 border-l-2 border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">{success}</p>}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
         <div className="flex items-center gap-3">
@@ -209,15 +209,15 @@ export default function ResultsManager({
         <div className="flex items-center gap-4 font-mono text-xs">
           <span>
             Judges Submitted:{" "}
-            <b className="text-[#124734]">
+            <b className="text-[#2a3441]">
               {sheetsCount.submitted} / {sheetsCount.total}
             </b>
           </span>
           <span
             className={`rounded px-2 py-0.5 font-bold uppercase tracking-wider ${
               selectedEvent?.status === "published"
-                ? "bg-[#124734] text-white"
-                : "bg-[#dfe8da] text-[#124734]"
+                ? "bg-[#2a3441] text-white"
+                : "bg-[#dfe5ec] text-[#2a3441]"
             }`}
           >
             {selectedEvent?.status === "published" ? "Published Official Verdict" : "Provisional Tabulation"}
@@ -226,7 +226,7 @@ export default function ResultsManager({
       </div>
 
       {winners.length > 0 && (
-        <div className="mt-6 border border-[#17251d]/20 bg-[#e6ece0] p-6">
+        <div className="mt-6 border border-[#17251d]/20 bg-[#e8edf2] p-6">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[.16em] text-[#61726a]">Winner's Podium</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             {winners.map((w) => (
@@ -234,11 +234,11 @@ export default function ResultsManager({
                 key={w.id}
                 className={`border p-4 ${
                   w.placement === 1
-                    ? "border-[#124734] bg-white shadow-md"
+                    ? "border-[#2a3441] bg-white shadow-md"
                     : "border-[#17251d]/20 bg-white/70"
                 }`}
               >
-                <span className="font-mono text-xs font-bold uppercase text-[#124734]">{w.title}</span>
+                <span className="font-mono text-xs font-bold uppercase text-[#2a3441]">{w.title}</span>
                 <p className="mt-2 font-display text-xl font-bold">{w.contestants?.full_name}</p>
                 <p className="mt-1 font-mono text-sm text-[#61726a]">Score: {Number(w.final_score).toFixed(2)}</p>
               </div>
@@ -250,7 +250,7 @@ export default function ResultsManager({
       {loading ? (
         <p className="mt-8 font-mono text-xs uppercase tracking-wider text-[#61726a]">Loading tabulation…</p>
       ) : results.length === 0 ? (
-        <div className="mt-8 border-l-2 border-[#124734] bg-[#e6ece0] p-6">
+        <div className="mt-8 border-l-2 border-[#2a3441] bg-[#e8edf2] p-6">
           <h2 className="font-display text-2xl">No Submitted Scores Yet</h2>
           <p className="mt-2 text-sm text-[#52655c]">
             Once assigned judges complete and submit their score sheets, the database scoring engine will calculate
@@ -260,7 +260,7 @@ export default function ResultsManager({
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Rank</th>
                 <th className="p-3">Contestant No.</th>
@@ -277,7 +277,7 @@ export default function ResultsManager({
                     <span
                       className={`inline-grid size-7 place-items-center font-display text-sm font-bold ${
                         r.rank === 1
-                          ? "bg-[#124734] text-white"
+                          ? "bg-[#2a3441] text-white"
                           : r.rank === 2
                           ? "bg-[#61726a] text-white"
                           : r.rank === 3
@@ -288,10 +288,10 @@ export default function ResultsManager({
                       {r.rank}
                     </span>
                   </td>
-                  <td className="p-3 font-mono font-bold text-[#124734]">{r.contestants?.contestant_number}</td>
+                  <td className="p-3 font-mono font-bold text-[#2a3441]">{r.contestants?.contestant_number}</td>
                   <td className="p-3 font-semibold">{r.contestants?.full_name}</td>
                   <td className="p-3 text-xs">{r.contestants?.course}</td>
-                  <td className="p-3 text-right font-mono text-base font-bold text-[#124734]">
+                  <td className="p-3 text-right font-mono text-base font-bold text-[#2a3441]">
                     {Number(r.final_score).toFixed(2)}
                   </td>
                   <td className="p-3 text-right font-mono text-xs uppercase text-[#61726a]">{r.status}</td>

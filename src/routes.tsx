@@ -26,7 +26,6 @@ const nav = [
   "Audit Logs",
   "Settings",
 ];
-const validPhone = /^(?:\+63|0)9\d{9}$/;
 const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 type ProfileContext = {
@@ -42,7 +41,7 @@ type ProfileContext = {
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <div className="grid size-10 place-items-center border-2 border-[#124734] bg-[#f6f3e9] font-display text-lg font-bold text-[#124734]">
+      <div className="grid size-10 place-items-center border-2 border-[#2a3441] bg-[#f6f3e9] font-display text-lg font-bold text-[#2a3441]">
         O
       </div>
       <div>
@@ -70,20 +69,20 @@ function AuthLayout({ children }: { children: ReactNode }) {
     <main className="min-h-screen bg-[#f1efe6] text-[#17251d]">
       <SetupNotice />
       <div className="mx-auto grid min-h-[calc(100vh-45px)] max-w-6xl lg:grid-cols-[.92fr_1.08fr]">
-        <section className="border-b border-[#17251d]/20 bg-[#124734] px-7 py-8 text-[#f7f4eb] lg:border-r lg:border-b-0 lg:px-12 lg:py-12">
+        <section className="border-b border-[#17251d]/20 bg-[#2a3441] px-7 py-8 text-[#f7f4eb] lg:border-r lg:border-b-0 lg:px-12 lg:py-12">
           <Brand />
           <div className="mt-20 max-w-sm">
-            <p className="font-mono text-[10px] uppercase tracking-[.18em] text-[#d7dcad]">
+            <p className="font-mono text-[10px] uppercase tracking-[.18em] text-[#d2dce6]">
               Competition Tabulation & Ranking
             </p>
             <h1 className="mt-5 font-display text-5xl leading-[.95] tracking-[-.055em]">
               Built for the integrity of every result.
             </h1>
-            <p className="mt-6 text-sm leading-6 text-[#dbe4d9]">
+            <p className="mt-6 text-sm leading-6 text-[#dbe3ec]">
               A controlled workspace for University competitions—from criterion approval to published verdicts.
             </p>
           </div>
-          <p className="mt-20 font-mono text-[10px] uppercase tracking-[.14em] text-[#d7dcad]">Academic Year 2026–2027</p>
+          <p className="mt-20 font-mono text-[10px] uppercase tracking-[.14em] text-[#d2dce6]">Academic Year 2026–2027</p>
         </section>
         <section className="flex items-center px-7 py-12 lg:px-16">{children}</section>
       </div>
@@ -181,7 +180,7 @@ function Login() {
         </button>
         <p className="mt-6 text-center text-sm text-[#61726a]">
           New judge?{" "}
-          <NavLink to="/register" className="font-bold text-[#124734] underline underline-offset-4">
+          <NavLink to="/register" className="font-bold text-[#2a3441] underline underline-offset-4">
             Request an account
           </NavLink>
         </p>
@@ -197,7 +196,6 @@ function Register() {
     password: "",
     confirm: "",
     judgeId: "",
-    phone: "",
   });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -209,7 +207,6 @@ function Register() {
     const name = form.name.trim().replace(/\s+/g, " ");
     const username = form.username.trim().toLowerCase();
     const judgeId = form.judgeId.trim();
-    const phone = form.phone.replace(/[\s-]/g, "").replace(/^0/, "+63");
 
     if (!/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(name))
       return setMessage("Full name must contain 2–80 letters and valid name characters.");
@@ -220,8 +217,6 @@ function Register() {
     if (form.password !== form.confirm) return setMessage("Password confirmation does not match.");
     if (!/^[A-Za-z0-9/_-]{3,40}$/.test(judgeId))
       return setMessage("Judge ID must use 3–40 letters, numbers, slash, underscore, or hyphen.");
-    if (!/^\+639\d{9}$/.test(phone) || !validPhone.test(form.phone.replace(/[\s-]/g, "")))
-      return setMessage("Contact number must be a valid Philippine mobile number.");
     if (!supabase) return setMessage("Supabase connection is required before registration can be used.");
 
     setLoading(true);
@@ -233,7 +228,6 @@ function Register() {
           full_name: name,
           username: username,
           judge_id: judgeId,
-          contact_number: phone,
         },
       },
     });
@@ -264,9 +258,10 @@ function Register() {
             onChange={set("username")}
             autoComplete="username"
           />
-          <Field label="Contact number" placeholder="0917 123 4567" value={form.phone} onChange={set("phone")} />
           <Field label="Password" type="password" value={form.password} onChange={set("password")} />
-          <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} />
+          <div className="sm:col-span-2">
+            <Field label="Confirm password" type="password" value={form.confirm} onChange={set("confirm")} />
+          </div>
         </div>
         {message && (
           <p role="alert" className="mt-4 border-l-2 border-[#a23b30] bg-[#f3e2dc] px-3 py-2 text-sm text-[#70271f]">
@@ -281,7 +276,7 @@ function Register() {
         </button>
         <p className="mt-5 text-center text-sm text-[#61726a]">
           Already approved?{" "}
-          <NavLink to="/login" className="font-bold text-[#124734] underline underline-offset-4">
+          <NavLink to="/login" className="font-bold text-[#2a3441] underline underline-offset-4">
             Sign in
           </NavLink>
         </p>
@@ -315,7 +310,7 @@ function Field({
         placeholder={placeholder}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-[#17251d]/35 bg-white px-3 py-3 text-sm outline-none transition focus:border-[#124734] focus:ring-1 focus:ring-[#124734]"
+        className="w-full border border-[#17251d]/35 bg-white px-3 py-3 text-sm outline-none transition focus:border-[#2a3441] focus:ring-1 focus:ring-[#2a3441]"
       />
     </label>
   );
@@ -388,7 +383,7 @@ function Application() {
                 {profile?.role ?? "Access pending"}
               </p>
             </div>
-            <button onClick={logout} className="border border-[#17251d]/30 px-3 py-2 text-xs font-bold hover:bg-[#e6ece0]">
+            <button onClick={logout} className="border border-[#17251d]/30 px-3 py-2 text-xs font-bold hover:bg-[#e8edf2]">
               Log out
             </button>
           </div>
@@ -408,7 +403,7 @@ function Application() {
                 className={({ isActive }) =>
                   `block shrink-0 border-l-2 px-3 py-2 text-sm ${
                     isActive
-                      ? "border-[#124734] bg-[#dfe8da] font-bold"
+                      ? "border-[#2a3441] bg-[#dfe5ec] font-bold"
                       : "border-transparent hover:border-[#17251d]/25 hover:bg-white/60"
                   }`
                 }
@@ -466,7 +461,7 @@ function DataPage() {
           </div>
           <div>
             <label className="block text-xs font-mono font-bold uppercase text-[#61726a]">Role</label>
-            <p className="text-sm capitalize font-mono text-[#124734] font-bold">{profile?.role}</p>
+            <p className="text-sm capitalize font-mono text-[#2a3441] font-bold">{profile?.role}</p>
           </div>
           <div>
             <label className="block text-xs font-mono font-bold uppercase text-[#61726a]">Username</label>
@@ -474,7 +469,7 @@ function DataPage() {
           </div>
           <div>
             <label className="block text-xs font-mono font-bold uppercase text-[#61726a]">Status</label>
-            <span className="inline-block rounded bg-[#dfe8da] px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-[#124734]">
+            <span className="inline-block rounded bg-[#dfe5ec] px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-[#2a3441]">
               {profile?.status}
             </span>
           </div>
@@ -489,7 +484,7 @@ function DataPage() {
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-5xl tracking-[-.055em]">{title}</h1>
       </div>
-      <div className="mt-10 border-l-2 border-[#124734] bg-[#e6ece0] px-5 py-7">
+      <div className="mt-10 border-l-2 border-[#2a3441] bg-[#e8edf2] px-5 py-7">
         <h2 className="font-display text-2xl">Module ready</h2>
         <p className="mt-2 max-w-xl text-sm leading-6 text-[#52655c]">
           Connected to Supabase PostgreSQL database.
@@ -600,7 +595,7 @@ function PublicResults() {
           <p className="mt-12 font-mono text-xs uppercase tracking-wider text-[#61726a]">Loading results</p>
         ) : results.length ? (
           <div className="mt-10 overflow-hidden border border-[#17251d]/20 bg-[#f8f6ee]">
-            <div className="grid grid-cols-[70px_1fr_120px] border-b border-[#17251d]/20 bg-[#e6ece0] px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <div className="grid grid-cols-[70px_1fr_120px] border-b border-[#17251d]/20 bg-[#e8edf2] px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <span>Rank</span>
               <span>Contestant / event</span>
               <span className="text-right">Final score</span>
@@ -617,14 +612,14 @@ function PublicResults() {
                     {result.events?.name}
                   </small>
                 </span>
-                <span className="text-right font-mono text-base font-bold text-[#124734]">
+                <span className="text-right font-mono text-base font-bold text-[#2a3441]">
                   {Number(result.final_score).toFixed(2)}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <div className="mt-10 border-l-2 border-[#124734] bg-[#e6ece0] px-5 py-7">
+          <div className="mt-10 border-l-2 border-[#2a3441] bg-[#e8edf2] px-5 py-7">
             <h2 className="font-display text-2xl">No published results yet</h2>
             <p className="mt-2 max-w-xl text-sm leading-6 text-[#52655c]">
               Official rankings will be visible here after event finalization and publication by the College of Computer

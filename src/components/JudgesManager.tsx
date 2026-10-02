@@ -116,7 +116,7 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
       </div>
 
       {error && <p className="mt-3 border-l-2 border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
-      {success && <p className="mt-3 border-l-2 border-[#124734] bg-[#dfe8da] p-2 text-xs text-[#124734]">{success}</p>}
+      {success && <p className="mt-3 border-l-2 border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">{success}</p>}
 
       {isAssignMode ? (
         <div className="mt-6 space-y-6">
@@ -156,7 +156,7 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                 <div className="flex items-end">
                   <button
                     type="submit"
-                    className="w-full bg-[#124734] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#1a5b44]"
+                    className="w-full bg-[#2a3441] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#394658]"
                   >
                     Assign to Event
                   </button>
@@ -167,7 +167,7 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
 
           <div className="overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+              <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
                 <tr>
                   <th className="p-3">Event</th>
                   <th className="p-3">Assigned Judge</th>
@@ -207,7 +207,7 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Judge Name</th>
                 <th className="p-3">Judge ID</th>
@@ -228,7 +228,7 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                     <span
                       className={`inline-block rounded-sm px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${
                         j.status === "active"
-                          ? "bg-[#dfe8da] text-[#124734]"
+                          ? "bg-[#dfe5ec] text-[#2a3441]"
                           : j.status === "pending"
                           ? "bg-[#fff3cf] text-[#a97b26]"
                           : "bg-[#f3e2dc] text-[#a23b30]"

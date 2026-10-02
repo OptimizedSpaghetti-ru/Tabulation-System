@@ -203,14 +203,14 @@ export default function ScoresManager({
               <button
                 onClick={handleSaveDraft}
                 disabled={loading || criteria.length === 0}
-                className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#124734] hover:bg-[#e6ece0] disabled:opacity-50"
+                className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#2a3441] hover:bg-[#e8edf2] disabled:opacity-50"
               >
                 Save Draft
               </button>
               <button
                 onClick={handleSubmitOfficial}
                 disabled={loading || criteria.length === 0 || contestants.length === 0}
-                className="bg-[#124734] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1a5b44] disabled:opacity-50"
+                className="bg-[#2a3441] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#394658] disabled:opacity-50"
               >
                 Submit Official Score Sheet
               </button>
@@ -220,7 +220,7 @@ export default function ScoresManager({
       </div>
 
       {error && <p className="mt-3 border-l-2 border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
-      {success && <p className="mt-3 border-l-2 border-[#124734] bg-[#dfe8da] p-2 text-xs text-[#124734]">{success}</p>}
+      {success && <p className="mt-3 border-l-2 border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">{success}</p>}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
         <div className="flex items-center gap-3">
@@ -243,7 +243,7 @@ export default function ScoresManager({
           Sheet Status:{" "}
           <span
             className={`rounded px-2 py-0.5 font-bold uppercase tracking-wider ${
-              sheetStatus === "submitted" ? "bg-[#dfe8da] text-[#124734]" : "bg-[#fff3cf] text-[#a97b26]"
+              sheetStatus === "submitted" ? "bg-[#dfe5ec] text-[#2a3441]" : "bg-[#fff3cf] text-[#a97b26]"
             }`}
           >
             {sheetStatus === "submitted" ? "Official Submitted (Locked)" : "Draft In Progress"}
@@ -262,7 +262,7 @@ export default function ScoresManager({
           </p>
         </div>
       ) : contestants.length === 0 ? (
-        <div className="mt-8 border-l-2 border-[#124734] bg-[#e6ece0] p-6">
+        <div className="mt-8 border-l-2 border-[#2a3441] bg-[#e8edf2] p-6">
           <h2 className="font-display text-2xl">No Contestants Registered</h2>
           <p className="mt-2 text-sm text-[#52655c]">
             There are no contestants currently registered for this event. An administrator must register contestants
@@ -272,13 +272,13 @@ export default function ScoresManager({
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Contestant</th>
                 {criteria.map((crit) => (
                   <th key={crit.id} className="p-3">
                     {crit.name}
-                    <span className="block font-normal text-[#124734]">
+                    <span className="block font-normal text-[#2a3441]">
                       {crit.weight_percentage}% (Max: {crit.max_score})
                     </span>
                   </th>
@@ -292,7 +292,7 @@ export default function ScoresManager({
                 return (
                   <tr key={c.id} className="hover:bg-white/50">
                     <td className="p-3">
-                      <span className="font-mono font-bold text-[#124734]">{c.contestant_number}</span>
+                      <span className="font-mono font-bold text-[#2a3441]">{c.contestant_number}</span>
                       <p className="font-semibold">{c.full_name}</p>
                     </td>
                     {criteria.map((crit) => {
@@ -319,7 +319,7 @@ export default function ScoresManager({
                         </td>
                       );
                     })}
-                    <td className="p-3 text-right font-mono text-base font-bold text-[#124734]">
+                    <td className="p-3 text-right font-mono text-base font-bold text-[#2a3441]">
                       {totalJudgeScore.toFixed(2)}
                     </td>
                   </tr>

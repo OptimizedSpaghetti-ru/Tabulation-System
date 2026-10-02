@@ -99,7 +99,7 @@ export default function CompetitionsManager({ isAdmin, profileId }: { isAdmin: b
         {isAdmin && (
           <button
             onClick={() => setShowModal(true)}
-            className="border border-[#124734] bg-[#124734] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1a5b44]"
+            className="border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#394658]"
           >
             + New Competition
           </button>
@@ -174,7 +174,7 @@ export default function CompetitionsManager({ isAdmin, profileId }: { isAdmin: b
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#124734] px-4 py-2 text-xs font-bold text-white hover:bg-[#1a5b44]"
+                  className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658]"
                 >
                   Save Competition
                 </button>
@@ -187,7 +187,7 @@ export default function CompetitionsManager({ isAdmin, profileId }: { isAdmin: b
       {loading ? (
         <p className="mt-8 font-mono text-xs uppercase tracking-wider text-[#61726a]">Loading competitions…</p>
       ) : competitions.length === 0 ? (
-        <div className="mt-8 border-l-2 border-[#124734] bg-[#e6ece0] p-6">
+        <div className="mt-8 border-l-2 border-[#2a3441] bg-[#e8edf2] p-6">
           <h2 className="font-display text-2xl">No competitions created yet</h2>
           <p className="mt-2 text-sm text-[#52655c]">
             {isAdmin
@@ -198,7 +198,7 @@ export default function CompetitionsManager({ isAdmin, profileId }: { isAdmin: b
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Name</th>
                 <th className="p-3">Academic Year</th>
@@ -217,7 +217,7 @@ export default function CompetitionsManager({ isAdmin, profileId }: { isAdmin: b
                   <td className="p-3 font-mono text-xs">{c.academic_year}</td>
                   <td className="p-3 text-xs">{c.start_date} to {c.end_date}</td>
                   <td className="p-3">
-                    <span className="inline-block rounded-sm bg-[#dfe8da] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#124734]">
+                    <span className="inline-block rounded-sm bg-[#dfe5ec] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#2a3441]">
                       {c.status}
                     </span>
                   </td>

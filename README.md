@@ -225,7 +225,6 @@ Follow this sequence to test full end-to-end functionality:
 2. **Registration**: Navigate to `/register` — request an account. Verify validation on:
    - Full name (minimum 2 characters)
    - Unique Username (3–30 alphanumeric / underscore characters, e.g. `admin`)
-   - Philippine mobile number (`+639...` or `09...`)
    - Strong password requirements
    - Unique Judge / Employee ID
 3. **Admin Approval**: In Supabase SQL or as an existing Admin under `/app/judges`, approve the pending judge.

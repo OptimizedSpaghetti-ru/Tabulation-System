@@ -167,7 +167,7 @@ export default function EventsManager({
             <button
               onClick={handleSeedOfficial}
               disabled={!selectedCompId}
-              className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#124734] hover:bg-[#e6ece0] disabled:opacity-50"
+              className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#2a3441] hover:bg-[#e8edf2] disabled:opacity-50"
               title="Populates the 6 official OLFU CCS events (Quiz Bee, Programming, Linux, PC Assembly, Dance, Pageant)"
             >
               Seed Official 6 Events
@@ -175,7 +175,7 @@ export default function EventsManager({
             <button
               onClick={() => setShowModal(true)}
               disabled={!selectedCompId}
-              className="bg-[#124734] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1a5b44] disabled:opacity-50"
+              className="bg-[#2a3441] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#394658] disabled:opacity-50"
             >
               + Add Event
             </button>
@@ -183,7 +183,7 @@ export default function EventsManager({
         )}
       </div>
 
-      {infoMsg && <p className="mt-3 border-l-2 border-[#124734] bg-[#dfe8da] p-2 text-xs text-[#124734]">{infoMsg}</p>}
+      {infoMsg && <p className="mt-3 border-l-2 border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">{infoMsg}</p>}
       {error && <p className="mt-3 border-l-2 border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
 
       <div className="mt-6 flex flex-wrap items-center gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
@@ -263,7 +263,7 @@ export default function EventsManager({
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#124734] px-4 py-2 text-xs font-bold text-white hover:bg-[#1a5b44]"
+                  className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658]"
                 >
                   Create Event
                 </button>
@@ -276,7 +276,7 @@ export default function EventsManager({
       {loading ? (
         <p className="mt-8 font-mono text-xs uppercase tracking-wider text-[#61726a]">Loading events…</p>
       ) : filteredEvents.length === 0 ? (
-        <div className="mt-8 border-l-2 border-[#124734] bg-[#e6ece0] p-6">
+        <div className="mt-8 border-l-2 border-[#2a3441] bg-[#e8edf2] p-6">
           <h2 className="font-display text-2xl">No events found</h2>
           <p className="mt-2 text-sm text-[#52655c]">
             {isAdmin
@@ -287,7 +287,7 @@ export default function EventsManager({
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e6ece0] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
               <tr>
                 <th className="p-3">Event Name</th>
                 <th className="p-3">Type</th>
@@ -305,7 +305,7 @@ export default function EventsManager({
                       <div className="flex items-center gap-2">
                         <span>{ev.name}</span>
                         {isAssigned && (
-                          <span className="rounded bg-[#124734] px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white">
+                          <span className="rounded bg-[#2a3441] px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white">
                             Your Event
                           </span>
                         )}
@@ -315,7 +315,7 @@ export default function EventsManager({
                     <td className="p-3 font-mono text-xs capitalize">{ev.event_type}</td>
                     <td className="p-3 font-mono text-xs capitalize">{ev.participation_type}</td>
                     <td className="p-3">
-                      <span className="inline-block rounded-sm bg-[#dfe8da] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#124734]">
+                      <span className="inline-block rounded-sm bg-[#dfe5ec] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#2a3441]">
                         {ev.status}
                       </span>
                     </td>
@@ -325,13 +325,13 @@ export default function EventsManager({
                           <>
                             <button
                               onClick={() => onNavigate("criteria")}
-                              className="border border-[#17251d]/30 bg-white px-2 py-1 text-xs font-bold hover:bg-[#e6ece0]"
+                              className="border border-[#17251d]/30 bg-white px-2 py-1 text-xs font-bold hover:bg-[#e8edf2]"
                             >
                               Criteria
                             </button>
                             <button
                               onClick={() => onNavigate("scores")}
-                              className="bg-[#124734] px-2 py-1 text-xs font-bold text-white hover:bg-[#1a5b44]"
+                              className="bg-[#2a3441] px-2 py-1 text-xs font-bold text-white hover:bg-[#394658]"
                             >
                               Scoring
                             </button>

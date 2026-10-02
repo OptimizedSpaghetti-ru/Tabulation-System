@@ -95,17 +95,17 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
         Skip to results
       </a>
       <header className="border-b border-[#17251d]/20 bg-[#f8f6ee]">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-5 py-5">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-4 px-5 py-5 md:grid-cols-[1fr_auto_1fr]">
           <NavLink
             to="/results"
             aria-label="University competition results"
-            className="min-w-0 focus-visible:outline-2 focus-visible:outline-offset-4"
+            className="min-w-0 justify-self-center focus-visible:outline-2 focus-visible:outline-offset-4 md:col-start-2"
           >
             {brand}
           </NavLink>
           <NavLink
             to="/login"
-            className="flex min-h-11 items-center text-sm font-bold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+            className="flex min-h-11 items-center justify-self-end text-sm font-bold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
           >
             Staff sign in
           </NavLink>

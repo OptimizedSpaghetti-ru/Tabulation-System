@@ -37,19 +37,24 @@ export default function CriteriaManager({
   })
 
   async function loadEvents() {
-    if (!supabase) return
+    if (!supabase) {
+      setError("Database connection is unavailable. Configure Supabase to manage criteria.")
+      setLoading(false)
+      return
+    }
     setLoading(true)
     let eventList: EventItem[] = []
 
     if (isAdmin) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("events")
         .select("id, name, status")
         .order("name")
       if (data) eventList = data
+      if (error) setError(error.message)
     } else if (profileId) {
       // Load only assigned events for judge
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("judge_event_assignments")
         .select("event_id, events(id, name, status)")
         .eq("judge_id", profileId)
@@ -57,6 +62,7 @@ export default function CriteriaManager({
       if (data) {
         eventList = data.map((d: any) => d.events).filter(Boolean)
       }
+      if (error) setError(error.message)
     }
 
     setEvents(eventList)
@@ -76,6 +82,7 @@ export default function CriteriaManager({
     if (!error && data) {
       setCriteria(data)
     }
+    if (error) setError(error.message)
   }
 
   useEffect(() => {
@@ -100,7 +107,14 @@ export default function CriteriaManager({
     e.preventDefault()
     setError("")
     setSuccess("")
-    if (!supabase || !selectedEventId) return
+    if (!supabase || !selectedEventId || !profileId) {
+      setError("Select an event and sign in before saving a criterion.")
+      return
+    }
+    if (isLocked) {
+      setError("Criteria are locked for scoring and cannot be changed.")
+      return
+    }
 
     const weight = Number(form.weight_percentage)
     const maxScore = Number(form.max_score)
@@ -201,13 +215,26 @@ export default function CriteriaManager({
           {!isLocked && (
             <button
               onClick={() => {
+                setError("")
+                setSuccess("")
+                if (!selectedEventId) {
+                  setError(isAdmin
+                    ? "Create an event in Events, then select it here to add criteria."
+                    : "You need an assigned event before adding criteria. Ask an administrator to assign one.")
+                  return
+                }
+                if (totalWeight >= 100) {
+                  setError("Criteria already total 100%. Delete an unlocked criterion to free up weight before adding another.")
+                  return
+                }
                 setForm((prev) => ({
                   ...prev,
+                  weight_percentage: Math.min(20, 100 - totalWeight),
                   display_order: criteria.length + 1,
                 }))
                 setShowModal(true)
               }}
-              disabled={!selectedEventId || totalWeight >= 100}
+              disabled={loading}
               className="border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658] disabled:opacity-50"
             >
               + Add Criterion
@@ -290,6 +317,7 @@ export default function CriteriaManager({
               Remaining weight budget: {100 - totalWeight}%
             </p>
             <form onSubmit={handleAddCriterion} className="mt-4 space-y-4">
+              {error && <p role="alert" className="bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
               <div>
                 <label className="block text-xs font-semibold">
                   Criterion Name

@@ -276,12 +276,16 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                 <label className="block text-xs font-semibold">
                   Department / Course
                 </label>
-                <input
+                <select
                   required
                   value={form.course}
                   onChange={(e) => setForm({ ...form, course: e.target.value })}
                   className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm outline-none"
-                />
+                >
+                  <option value="BS Information Technology">BS Information Technology</option>
+                  <option value="BS Computer Science">BS Computer Science</option>
+                  <option value="BS Entertainment and Multimedia Computing">BS Entertainment and Multimedia Computing</option>
+                </select>
               </div>
               <div className="flex justify-end gap-3 pt-3">
                 <button

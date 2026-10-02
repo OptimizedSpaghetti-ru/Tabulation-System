@@ -446,9 +446,11 @@ function Application() {
     <main className="workspace min-h-screen bg-[#f1efe6] text-[#17251d]">
       <SetupNotice />
       <header className="border-b border-[#17251d]/20 bg-[#f8f6ee]">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-4 lg:px-8">
-          <Brand />
-          <div className="flex items-center gap-4">
+        <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-4 px-5 py-4 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
+          <div className="min-w-0 justify-self-center lg:col-start-2">
+            <Brand />
+          </div>
+          <div className="flex items-center justify-self-end gap-4">
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold">
                 {profile?.full_name ?? "Account"}

@@ -61,6 +61,7 @@ export default function EventsManager({
   const [assignedEventIds, setAssignedEventIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [infoMsg, setInfoMsg] = useState("")
   const [form, setForm] = useState({
@@ -72,17 +73,23 @@ export default function EventsManager({
   })
 
   async function loadData() {
-    if (!supabase) return
+    if (!supabase) {
+      setError("Database connection is unavailable. Configure Supabase to manage events.")
+      setLoading(false)
+      return
+    }
     setLoading(true)
+    try {
     // Load competitions
-    const { data: compData } = await supabase
+    const { data: compData, error: compError } = await supabase
       .from("competitions")
       .select("id, name")
       .order("created_at", { ascending: false })
-    if (compData && compData.length > 0) {
+    if (compError) setError(`Could not load competitions: ${compError.message}`)
+    if (compData) {
       setCompetitions(compData)
-      if (!selectedCompId) {
-        setSelectedCompId(compData[0].id)
+      if (!compData.some((competition) => competition.id === selectedCompId)) {
+        setSelectedCompId(compData[0]?.id || "")
       }
     }
 
@@ -93,7 +100,8 @@ export default function EventsManager({
         "id, competition_id, name, description, event_type, participation_type, status, competitions(name)",
       )
       .order("name")
-    const { data: eventData } = await query
+    const { data: eventData, error: eventError } = await query
+    if (eventError) setError(`Could not load events: ${eventError.message}`)
     if (eventData) {
       setEvents(eventData as unknown as EventItem[])
     }
@@ -109,7 +117,11 @@ export default function EventsManager({
         setAssignedEventIds(assignData.map((a) => a.event_id))
       }
     }
-    setLoading(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load events. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -151,12 +163,27 @@ export default function EventsManager({
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
     setError("")
-    if (!supabase || !selectedCompId) return
+    setInfoMsg("")
+    if (saving) return
+    if (!supabase) {
+      setError("Database connection is unavailable. Configure Supabase before creating an event.")
+      return
+    }
+    if (!selectedCompId) {
+      setError("Create or select a competition before creating an event.")
+      return
+    }
+    if (!isAdmin || !profileId) {
+      setError("Sign in as an administrator to create an event.")
+      return
+    }
     if (form.name.trim().length < 2) {
       setError("Event name must be at least 2 characters.")
       return
     }
 
+    setSaving(true)
+    try {
     const { error: insertError } = await supabase.from("events").insert({
       competition_id: selectedCompId,
       name: form.name.trim(),
@@ -180,7 +207,13 @@ export default function EventsManager({
       participation_type: "individual",
       status: "draft",
     })
-    loadData()
+    setInfoMsg("Event created successfully.")
+    await loadData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create the event. Please try again.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function updateStatus(id: string, newStatus: string) {
@@ -211,8 +244,11 @@ export default function EventsManager({
               Seed Official 6 Events
             </button>
             <button
-              onClick={() => setShowModal(true)}
-              disabled={!selectedCompId}
+              onClick={() => {
+                setError("")
+                setInfoMsg("")
+                setShowModal(true)
+              }}
               className="bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658] disabled:opacity-50"
             >
               + Add Event
@@ -259,6 +295,31 @@ export default function EventsManager({
               Add Event
             </h2>
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
+              {error && (
+                <p role="alert" className="bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>
+              )}
+              <div>
+                <label htmlFor="event-competition" className="block text-xs font-semibold">Competition</label>
+                <select
+                  id="event-competition"
+                  required
+                  value={selectedCompId}
+                  onChange={(e) => setSelectedCompId(e.target.value)}
+                  disabled={loading || saving}
+                  className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm"
+                >
+                  <option value="">{loading ? "Loading competitions…" : "Select a competition"}</option>
+                  {competitions.map((competition) => (
+                    <option key={competition.id} value={competition.id}>{competition.name}</option>
+                  ))}
+                </select>
+                {!loading && competitions.length === 0 && (
+                  <div className="mt-2 text-sm text-[#52655c]">
+                    <p>Create a competition first. Each event must belong to a competition.</p>
+                    {onNavigate && <button type="button" onClick={() => onNavigate("competitions")} className="mt-2 underline underline-offset-4">Go to Competitions</button>}
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="block text-xs font-semibold">
                   Event Name
@@ -322,6 +383,7 @@ export default function EventsManager({
               <div className="flex justify-end gap-3 pt-3">
                 <button
                   type="button"
+                  disabled={saving}
                   onClick={() => setShowModal(false)}
                   className="border border-[#17251d]/30 px-3 py-2 text-xs font-bold"
                 >
@@ -329,9 +391,10 @@ export default function EventsManager({
                 </button>
                 <button
                   type="submit"
+                  disabled={saving || loading || !selectedCompId}
                   className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658]"
                 >
-                  Create Event
+                  {saving ? "Creating Event…" : "Create Event"}
                 </button>
               </div>
             </form>

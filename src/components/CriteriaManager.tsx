@@ -12,7 +12,6 @@ type Criterion = {
   weight_percentage: number;
   max_score: number;
   display_order: number;
-  is_locked: boolean
 }
 
 export default function CriteriaManager({
@@ -125,7 +124,6 @@ export default function CriteriaManager({
     0,
   ) * 100) / 100
   const weightBudget = 100 - totalWeight + Number(criteria.find(c => c.id === editingId)?.weight_percentage ?? 0)
-  const isLocked = criteria.some((c) => c.is_locked)
 
   async function handleAddCriterion(e: FormEvent) {
     e.preventDefault()
@@ -134,10 +132,6 @@ export default function CriteriaManager({
     setSuccess("")
     if (!supabase || !selectedEventId || !profileId) {
       setError("Select a competition and sign in before saving a criterion.")
-      return
-    }
-    if (isLocked) {
-      setError("Criteria are locked for scoring and cannot be changed.")
       return
     }
 
@@ -193,7 +187,7 @@ export default function CriteriaManager({
   }
 
   async function handleDelete(id: string) {
-    if (!supabase || isLocked) return
+    if (!supabase) return
     setError("")
     const { error: delErr } = await supabase
       .from("criteria")
@@ -206,56 +200,6 @@ export default function CriteriaManager({
     }
   }
 
-  async function handleUnlockCriteria() {
-    if (!supabase || !selectedEventId || !isAdmin || saving) return
-    const eventId = selectedEventId
-    setError("")
-    setSuccess("")
-    setSaving(true)
-    try {
-      const { error: rpcErr } = await supabase.rpc("unlock_criteria_for_editing", {
-        event_uuid: eventId,
-      })
-      if (rpcErr) {
-        setError(rpcErr.message)
-        return
-      }
-      await loadCriteria(eventId)
-      setEvents(prev => prev.map(event => event.id === eventId ? { ...event, status: "draft" } : event))
-      setSuccess("Criteria unlocked. Edit the criteria, then lock them again to resume scoring.")
-    } catch {
-      setError("Could not unlock criteria. Please try again.")
-    } finally {
-      setSaving(false)
-    }
-  }
-  async function handleLockCriteria() {
-    if (!supabase || !selectedEventId) return
-    setError("")
-    setSuccess("")
-
-    if (totalWeight !== 100) {
-      setError(
-        `Cannot lock criteria: Total weight is currently ${totalWeight}%. It must total exactly 100%.`,
-      )
-      return
-    }
-
-    const { error: rpcErr } = await supabase.rpc("lock_criteria_for_scoring", {
-      event_uuid: selectedEventId,
-    })
-
-    if (rpcErr) {
-      setError(rpcErr.message)
-    } else {
-      setSuccess(
-        "Criteria locked successfully! Scoring is now open for this competition.",
-      )
-      loadCriteria(selectedEventId)
-      loadEvents()
-    }
-  }
-
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#17251d]/20 pb-5">
@@ -265,7 +209,6 @@ export default function CriteriaManager({
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {!isLocked && (
             <button
               onClick={() => {
                 setError("")
@@ -277,7 +220,7 @@ export default function CriteriaManager({
                   return
                 }
                 if (totalWeight >= 100) {
-                  setError("Criteria already total 100%. Delete an unlocked criterion to free up weight before adding another.")
+                  setError("Criteria already total 100%. Edit or delete a criterion to free up weight before adding another.")
                   return
                 }
                 setEditingId(null)
@@ -293,25 +236,6 @@ export default function CriteriaManager({
             >
               + Add Criterion
             </button>
-          )}
-          {isLocked && isAdmin && (
-            <button
-              onClick={handleUnlockCriteria}
-              disabled={loading || criteriaLoading || saving}
-              className="border border-[#2a3441] px-4 py-2 text-xs font-bold text-[#2a3441] hover:bg-[#e8edf2] disabled:opacity-50"
-            >
-              {saving ? "Unlocking…" : "Unlock Criteria"}
-            </button>
-          )}
-          {!isLocked && totalWeight === 100 && (
-            <button
-              onClick={handleLockCriteria}
-              disabled={criteriaLoading || saving}
-              className="border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658]"
-            >
-              Lock Criteria for Scoring
-            </button>
-          )}
         </div>
       </div>
 
@@ -367,15 +291,7 @@ export default function CriteriaManager({
             </b>{" "}
             / 100%
           </span>
-          <span
-            className={`rounded px-2 py-0.5 font-bold  ${
-              isLocked
-                ? "bg-[#dfe5ec] text-[#2a3441]"
-                : "bg-[#f1f5f9] text-[#475569]"
-            }`}
-          >
-            {isLocked ? "Locked (Scoring Open)" : "Configurable"}
-          </span>
+
         </div>
       </div>
 
@@ -519,8 +435,7 @@ export default function CriteriaManager({
                 <th className="p-3">Criterion</th>
                 <th className="p-3">Weight (%)</th>
                 <th className="p-3">Max Points</th>
-                <th className="p-3">Status</th>
-                {!isLocked && <th className="p-3 text-right">Actions</th>}
+                <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#17251d]/10">
@@ -539,14 +454,6 @@ export default function CriteriaManager({
                     {c.weight_percentage}%
                   </td>
                   <td className="p-3 font-mono text-xs">{c.max_score}</td>
-                  <td className="p-3 font-mono text-xs">
-                    {c.is_locked ? (
-                      <span className="text-[#2a3441]">Locked</span>
-                    ) : (
-                      <span className="text-[#475569]">Draft</span>
-                    )}
-                  </td>
-                  {!isLocked && (
                     <td className="p-3 text-right">
                       <button
                         onClick={() => {
@@ -564,7 +471,6 @@ export default function CriteriaManager({
                         Delete
                       </button>
                     </td>
-                  )}
                 </tr>
               ))}
             </tbody>
@@ -581,12 +487,12 @@ export default function CriteriaManager({
                   {totalWeight}%
                 </td>
                 <td
-                  colSpan={!isLocked ? 3 : 2}
+                  colSpan={2}
                   className="p-3 text-right font-normal text-[#61726a]"
                 >
                   {totalWeight === 100
                     ? "Weight target reached (100%)"
-                    : `Need ${100 - totalWeight}% more to lock criteria.`}
+                    : `Need ${100 - totalWeight}% more before scoring can begin.`}
                 </td>
               </tr>
             </tfoot>

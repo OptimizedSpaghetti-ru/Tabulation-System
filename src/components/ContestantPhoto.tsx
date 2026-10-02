@@ -6,6 +6,109 @@ import { PHOTO_BUCKET } from "../lib/contestant-photo-storage"
 
 import { validateContestantPhoto } from "../lib/contestant-photo"
 
+function PhotoViewer({
+  src,
+  name,
+  size,
+  onError,
+}: {
+  src: string
+  name: string
+  size: string
+  onError?: () => void
+}) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open])
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={`Enlarge photo of ${name}`}
+        aria-haspopup="dialog"
+        className={`${size} shrink-0 overflow-hidden rounded-sm cursor-zoom-in hover:opacity-90`}
+        onClick={() => {
+          dialog.current?.showModal()
+          setOpen(true)
+        }}
+      >
+        <img
+          src={src}
+          alt={`Photo of ${name}`}
+          onError={onError}
+          className="h-full w-full object-cover"
+        />
+      </button>
+      <dialog
+        ref={dialog}
+        aria-labelledby={titleId}
+        className="contestant-photo-viewer fixed m-auto w-fit max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] overflow-auto rounded-lg bg-white p-0 text-[#2a3441] shadow-xl"
+        onClose={() => setOpen(false)}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return
+          const bounds = event.currentTarget.getBoundingClientRect()
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          ) {
+            dialog.current?.close()
+          }
+        }}
+      >
+        {open && (
+          <>
+            <div className="flex items-center justify-between gap-4 px-4 py-3">
+              <h2
+                id={titleId}
+                className="min-w-0 break-words text-sm font-semibold"
+              >
+                {name}
+              </h2>
+              <button
+                type="button"
+                autoFocus
+                aria-label="Close enlarged photo"
+                onClick={() => dialog.current?.close()}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm hover:bg-[#e8edf2]"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="m6 6 12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <img
+              src={src}
+              alt={`Enlarged photo of ${name}`}
+              className="block max-h-[calc(100dvh-7rem)] max-w-full w-auto mx-auto object-contain"
+            />
+          </>
+        )}
+      </dialog>
+    </>
+  )
+}
+
 export default function ContestantPhoto({
   path,
   name,
@@ -57,11 +160,11 @@ export default function ContestantPhoto({
   const size = large ? "h-24 w-24" : "h-12 w-12"
 
   return url && !failed ? (
-    <img
+    <PhotoViewer
       src={url}
-      alt={`Photo of ${name}`}
+      name={name}
       onError={() => setFailed(true)}
-      className={`${size} shrink-0 rounded-sm object-cover`}
+      size={size}
     />
   ) : (
     <span
@@ -140,10 +243,10 @@ export function ContestantPhotoPicker({
       </label>
       <div className="flex flex-wrap items-center gap-4">
         {preview ? (
-          <img
+          <PhotoViewer
             src={preview}
-            alt="Selected photo preview"
-            className="h-24 w-24 rounded-sm object-cover"
+            name={name || "Contestant"}
+            size="h-24 w-24"
           />
         ) : (
           <ContestantPhoto path={removed ? null : path} name={name} large />

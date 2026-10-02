@@ -1,3 +1,4 @@
+import { criteriaReadyForScoring } from "../lib/criteria-readiness"
 import { getDefaultEventId } from "../lib/default-event"
 import { useEffect, useState } from "react"
 
@@ -112,8 +113,6 @@ export default function ScoresManager({
 
       .eq("event_id", eventId)
 
-      .eq("is_locked", true)
-
       .order("display_order")
 
     setCriteria(critData || [])
@@ -220,12 +219,19 @@ export default function ScoresManager({
     }))
   }
 
+  const criteriaReady = criteriaReadyForScoring(criteria)
+
   async function handleSaveDraft() {
     if (!supabase || !profileId || !selectedEventId) return
 
     setError("")
 
     setSuccess("")
+
+    if (!criteriaReady) {
+      setError("Criteria weights must total exactly 100% before scoring can begin.")
+      return
+    }
 
     const scoreInserts: any[] = []
 
@@ -272,6 +278,11 @@ export default function ScoresManager({
     setError("")
 
     setSuccess("")
+
+    if (!criteriaReady) {
+      setError("Criteria weights must total exactly 100% before scoring can begin.")
+      return
+    }
 
     // Check that all scores are filled
 
@@ -323,7 +334,7 @@ export default function ScoresManager({
             <>
               <button
                 onClick={handleSaveDraft}
-                disabled={loading || criteria.length === 0}
+                disabled={loading || !criteriaReady}
                 className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold  text-[#2a3441] hover:bg-[#e8edf2] disabled:opacity-50"
               >
                 Save Draft
@@ -331,7 +342,7 @@ export default function ScoresManager({
               <button
                 onClick={handleSubmitOfficial}
                 disabled={
-                  loading || criteria.length === 0 || contestants.length === 0
+                  loading || !criteriaReady || contestants.length === 0
                 }
                 className="bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658] disabled:opacity-50"
               >
@@ -392,15 +403,14 @@ export default function ScoresManager({
 
       {loading ? (
         <p className="mt-8 text-xs text-[#61726a]">Loading score sheet…</p>
-      ) : criteria.length === 0 ? (
+      ) : !criteriaReady ? (
         <div className="mt-8 border-l border-[#a23b30] bg-[#f3e2dc] p-6">
           <h2 className="font-sans text-lg font-semibold">
-            Criteria Not Locked for Scoring
+            Criteria Not Ready for Scoring
           </h2>
           <p className="mt-2 text-sm text-[#70271f]">
-            This competition does not have finalized and locked criteria
-            totaling 100%. Please configure and lock criteria in the Criteria
-            tab before scoring can begin.
+            This competition needs criteria totaling exactly 100%. Configure
+            the weights in the Criteria tab before scoring can begin.
           </p>
         </div>
       ) : contestants.length === 0 ? (

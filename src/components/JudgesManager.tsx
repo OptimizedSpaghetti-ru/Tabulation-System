@@ -404,7 +404,7 @@ export default function JudgesManager({
                     onChange={(e) => setSelectedJudgeId(e.target.value)}
                     className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm"
                   >
-                    <option value="">-- Choose Judge --</option>
+                    <option value=""> Choose Judge </option>
                     {activeJudges.map((j) => (
                       <option key={j.id} value={j.id}>
                         {j.full_name} (@{authEmailToUsername(j.email)}){" "}

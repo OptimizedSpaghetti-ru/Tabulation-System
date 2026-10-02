@@ -432,7 +432,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                       onChange={(e) =>
                         setForm({ ...form, contestant_number: e.target.value })
                       }
-                      placeholder="#01"
+                      placeholder="01"
                       className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm outline-none"
                     />
                   </div>

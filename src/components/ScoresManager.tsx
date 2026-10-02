@@ -1,6 +1,6 @@
 import { criteriaReadyForScoring } from "../lib/criteria-readiness"
 import { getDefaultEventId } from "../lib/default-event"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type CSSProperties } from "react"
 
 import { supabase } from "../lib/supabase"
 
@@ -41,6 +41,8 @@ export default function ScoresManager({
   const [criteria, setCriteria] = useState<Criterion[]>([])
 
   const [contestants, setContestants] = useState<Contestant[]>([])
+
+  const [activeContestantIndex, setActiveContestantIndex] = useState(0)
 
   const [scores, setScores] = useState<Record<string, Record<string, number>>>(
     {},
@@ -133,6 +135,7 @@ export default function ScoresManager({
       ecData?.map((ec: any) => ec.contestants).filter(Boolean) || []
 
     setContestants(contList)
+    setActiveContestantIndex(0)
 
     // Load judge score sheet status
 
@@ -196,7 +199,18 @@ export default function ScoresManager({
   ) {
     if (sheetStatus === "submitted") return
 
+    if (value.trim() === "") {
+      setScores((prev) => {
+        const next = { ...(prev[contestantId] || {}) }
+        delete next[criterionId]
+        return { ...prev, [contestantId]: next }
+      })
+      setError("")
+      return
+    }
+
     const num = Number(value)
+    if (!Number.isFinite(num)) return
 
     if (num < 0) return
 
@@ -322,12 +336,13 @@ export default function ScoresManager({
   }
 
   return (
-    <div>
+    <div className="judge-scoring">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#17251d]/20 pb-5">
         <div>
           <h1 className="font-sans text-[28px] font-semibold leading-9 tracking-[-.02em]">
             Score Sheet
           </h1>
+        
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {sheetStatus !== "submitted" && (
@@ -354,22 +369,23 @@ export default function ScoresManager({
       </div>
 
       {error && (
-        <p className="mt-3 border-l border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">
+        <p role="alert" className="mt-3 border-l border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">
           {error}
         </p>
       )}
       {success && (
-        <p className="mt-3 border-l border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">
+        <p role="status" className="mt-3 border-l border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">
           {success}
         </p>
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#ffffff] p-4 border border-[#17251d]/20">
         <div className="flex items-center gap-3">
-          <label className="text-xs font-bold  text-[#61726a]">
+          <label htmlFor="scoring-event" className="text-xs font-bold  text-[#61726a]">
             Competition:
           </label>
           <select
+            id="scoring-event"
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
             className="border border-[#17251d]/30 bg-white px-3 py-1.5 text-sm font-semibold outline-none"
@@ -425,89 +441,104 @@ export default function ScoresManager({
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#ffffff]">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
-              <tr>
-                <th className="p-3">Contestant</th>
-                {criteria.map((crit) => (
-                  <th key={crit.id} className="p-3">
-                    {crit.name}
-                    <span className="block font-normal text-[#2a3441]">
-                      {crit.weight_percentage}% (Max: {crit.max_score})
-                    </span>
-                  </th>
-                ))}
-                <th className="p-3 text-right">Your Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#17251d]/10">
-              {contestants.map((c) => {
-                let totalJudgeScore = 0
-
-                return (
-                  <tr key={c.id} className="hover:bg-white/50">
-                    <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        <ContestantPhoto
-                          path={c.photo_path}
-                          name={c.full_name}
-                        />
-                        <div>
-                          <span className="font-mono font-bold text-[#2a3441]">
-                            {c.contestant_number}
-                          </span>
-                          <p className="font-semibold">{c.full_name}</p>
+        <div className="mt-6 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-[#52655c]">
+            <p>{contestants.filter((c) => criteria.every((crit) => scores[c.id]?.[crit.id] !== undefined)).length} of {contestants.length} contestants fully scored</p>
+            <p className="text-xs">Changes are saved when you select Save Draft.</p>
+          </div>
+          {!isAdmin && (
+            <nav aria-label="Contestant navigation" className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                aria-label="Previous contestant"
+                disabled={activeContestantIndex === 0}
+                onClick={() => setActiveContestantIndex((index) => Math.max(0, index - 1))}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#17251d]/30 bg-white text-[#2a3441] hover:bg-[#e8edf2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:cursor-default disabled:opacity-40"
+              >
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              </button>
+              <p aria-live="polite" aria-atomic="true" className="text-center text-sm font-semibold text-[#2a3441]">
+                Contestant {activeContestantIndex + 1} of {contestants.length}
+              </p>
+              <button
+                type="button"
+                aria-label="Next contestant"
+                disabled={activeContestantIndex >= contestants.length - 1}
+                onClick={() => setActiveContestantIndex((index) => Math.min(contestants.length - 1, index + 1))}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#17251d]/30 bg-white text-[#2a3441] hover:bg-[#e8edf2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:cursor-default disabled:opacity-40"
+              >
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              </button>
+            </nav>
+          )}
+          {(isAdmin ? contestants : contestants.slice(activeContestantIndex, activeContestantIndex + 1)).map((c) => {
+            const completed = criteria.filter((crit) => scores[c.id]?.[crit.id] !== undefined).length
+            const total = criteria.reduce((sum, crit) => sum + (scores[c.id]?.[crit.id] ?? 0) * Number(crit.weight_percentage) / 100, 0)
+            return (
+              <section key={c.id} aria-labelledby={`contestant-${c.id}`} className="score-contestant overflow-hidden border border-[#17251d]/20 bg-white">
+                <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#17251d]/10 bg-[#f8faf9] px-5 py-4 sm:px-6">
+                  <div className="flex items-center gap-3">
+                    <ContestantPhoto path={c.photo_path} name={c.full_name} />
+                    <div>
+                      <h2 id={`contestant-${c.id}`} className="text-lg font-semibold tracking-[-.02em] text-[#2a3441]">
+                        <span className="mr-3 font-mono text-sm text-[#52655c]">#{c.contestant_number}</span>{c.full_name}
+                      </h2>
+                      <p className="mt-1 text-xs text-[#52655c]">{completed === criteria.length ? "All criteria scored" : `${completed} of ${criteria.length} criteria scored`}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-3 text-[#2a3441]">
+                    <span className="text-xs">Weighted total</span>
+                    <output aria-label={`Weighted total for ${c.full_name}`} className="font-mono text-2xl font-semibold tabular-nums">{total.toFixed(2)}</output>
+                  </div>
+                </header>
+                <div className="grid grid-cols-1 gap-x-10 gap-y-8 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
+                  {criteria.map((crit) => {
+                    const raw = scores[c.id]?.[crit.id]
+                    const maximum = Number(crit.max_score)
+                    const sliderMaximum = Math.floor(maximum / 5) * 5
+                    const weighted = (raw ?? 0) * Number(crit.weight_percentage) / 100
+                    const inputId = `score-${c.id}-${crit.id}`
+                    const disabled = sheetStatus === "submitted"
+                    return (
+                      <div key={crit.id} className="min-w-0">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                          <div>
+                            <label htmlFor={inputId} className="block text-sm font-semibold text-[#2a3441]">{crit.name}</label>
+                            <p className="mt-1 text-xs text-[#52655c]">{crit.weight_percentage}% weight</p>
+                          </div>
+                          <div className="flex shrink-0 items-baseline gap-1.5">
+                            <input id={inputId} type="number" min="0" max={maximum} step="0.5" disabled={disabled}
+                              value={raw ?? ""} placeholder="?"
+                              onChange={(e) => handleScoreChange(c.id, crit.id, e.target.value, maximum)}
+                              className="score-number w-[72px] border border-[#17251d]/25 bg-white px-2 py-2 text-center font-mono text-lg font-semibold text-[#2a3441] disabled:bg-[#f3f4f6]"
+                              aria-describedby={`${inputId}-help`} />
+                            <span className="text-xs text-[#52655c]">/ {maximum}</span>
+                          </div>
                         </div>
+                        <input type="range" min="0" max={sliderMaximum} step="5"
+                          value={Math.min(sliderMaximum, Math.round((raw ?? 0) / 5) * 5)}
+                          disabled={disabled || sliderMaximum === 0}
+                          aria-label={`${crit.name} score for ${c.full_name}, in steps of 5`}
+                          aria-describedby={`${inputId}-help`}
+                          onChange={(e) => handleScoreChange(c.id, crit.id, e.target.value, maximum)}
+                          className={`score-slider ${raw === undefined ? "score-slider-empty" : ""}`}
+                          style={{ "--score-fill": `${sliderMaximum > 0 ? Math.min(100, Math.round((raw ?? 0) / 5) * 5 / sliderMaximum * 100) : 0}%` } as CSSProperties} />
+                        <div aria-hidden="true" className="score-ticks">
+                          {Array.from({ length: Math.min(40, Math.floor(sliderMaximum / 5)) + 1 }, (_, tick) => <span key={tick} />)}
+                        </div>
+                        <div id={`${inputId}-help`} className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[#52655c]">
+                          <span>0</span>
+                          <span>{raw === undefined ? "Awaiting score" : `${weighted.toFixed(2)} weighted points`}</span>
+                          <span>{sliderMaximum}</span>
+                        </div>
+                        {sliderMaximum < maximum && <p className="mt-2 text-xs text-[#52655c]">Type a score to enter up to {maximum}.</p>}
                       </div>
-                    </td>
-                    {criteria.map((crit) => {
-                      const raw = scores[c.id]?.[crit.id]
-
-                      const weighted =
-                        typeof raw === "number"
-                          ? (raw * Number(crit.weight_percentage)) / 100
-                          : 0
-
-                      totalJudgeScore += weighted
-
-                      return (
-                        <td key={crit.id} className="p-3">
-                          <input
-                            type="number"
-                            min="0"
-                            max={crit.max_score}
-                            step="0.5"
-                            disabled={sheetStatus === "submitted"}
-                            value={raw !== undefined ? raw : ""}
-                            onChange={(e) =>
-                              handleScoreChange(
-                                c.id,
-
-                                crit.id,
-
-                                e.target.value,
-
-                                crit.max_score,
-                              )
-                            }
-                            className="w-20 border border-[#17251d]/30 bg-white p-1.5 font-mono text-sm outline-none disabled:bg-gray-100"
-                            placeholder="0.00"
-                          />
-                          <span className="ml-2 text-xs text-[#61726a]">
-                            = {weighted.toFixed(2)}
-                          </span>
-                        </td>
-                      )
-                    })}
-                    <td className="p-3 text-right font-mono text-base font-bold text-[#2a3441]">
-                      {totalJudgeScore.toFixed(2)}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
         </div>
       )}
     </div>

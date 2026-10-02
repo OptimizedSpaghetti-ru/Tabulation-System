@@ -12,7 +12,7 @@ begin
     (target_competition, 'Programming Competition', 'technical', 'team', 'draft', actor),
     (target_competition, 'Linux Competition', 'technical', 'team', 'draft', actor),
     (target_competition, 'PC Assembly and Disassembly', 'technical', 'team', 'draft', actor),
-    (target_competition, 'Dance Competition', 'performance', 'team', 'draft', actor),
-    (target_competition, 'Pageant', 'performance', 'individual', 'draft', actor)
+    (target_competition, 'Networking Competition', 'technical', 'team', 'draft', actor),
+    (target_competition, 'Mr. and Ms. CCS', 'performance', 'individual', 'draft', actor)
   on conflict (competition_id, name) do nothing;
 end $$;

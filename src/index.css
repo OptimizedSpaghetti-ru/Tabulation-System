@@ -24,7 +24,7 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .public-results input { caret-color: #2a3441; }
 .public-results header p + p { font-family: var(--font-sans); font-size: 12px; letter-spacing: .02em; text-transform: none; }
 
-.auth-page, .workspace { background-color: #f5f6f4; }
+.auth-page, .workspace { background-color: #f3f4f6; }
 .auth-page button[type="submit"], .auth-page form > button { min-height: 44px; border-radius: 6px; margin-top: 20px; }
 .auth-page form > button:hover:not(:disabled) { background-color: #2a3441; }
 .auth-page form > p[role="alert"] { border-left-width: 1px; font-size: 14px; }
@@ -35,7 +35,7 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .workspace table :is(td, th) { padding-top: 10px; padding-bottom: 10px; }
 .workspace nav a { border-radius: 0 4px 4px 0; }
 .workspace :is(input, textarea) { caret-color: #2a3441; }
-.workspace [class*="overflow-x-auto"] { scrollbar-width: thin; scrollbar-color: #8d9990 #f5f6f4; }
+.workspace [class*="overflow-x-auto"] { scrollbar-width: thin; scrollbar-color: #8d9990 #f3f4f6; }
 @media (max-width: 639px) {
   .workspace header > div { flex-wrap: wrap; gap: 12px; }
 }

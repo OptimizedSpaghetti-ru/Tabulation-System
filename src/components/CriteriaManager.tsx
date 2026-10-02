@@ -1,5 +1,7 @@
-import { FormEvent, useEffect, useState } from "react"
+import { getDefaultEventId } from "../lib/default-event"
+import { FormEvent, useEffect, useRef, useState } from "react"
 import { supabase } from "../lib/supabase"
+import { pageantDefaults, canInitializePageantDefaults } from "../lib/pageant-defaults"
 
 type EventItem = { id: string; name: string; status: string }
 type Criterion = {
@@ -25,6 +27,10 @@ export default function CriteriaManager({
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [criteriaLoading, setCriteriaLoading] = useState(false)
+  const criteriaRequest = useRef(0)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -67,22 +73,39 @@ export default function CriteriaManager({
 
     setEvents(eventList)
     if (eventList.length > 0) {
-      setSelectedEventId(eventList[0].id)
+      setSelectedEventId(getDefaultEventId(eventList))
     }
     setLoading(false)
   }
 
-  async function loadCriteria(eventId: string) {
+  async function loadCriteria(eventId: string, initializeDefaults = false) {
     if (!supabase || !eventId) return
+    const request = ++criteriaRequest.current
+    setCriteriaLoading(true)
+    setCriteria([])
     const { data, error } = await supabase
       .from("criteria")
       .select("*")
       .eq("event_id", eventId)
       .order("display_order")
+    if (request !== criteriaRequest.current) return
     if (!error && data) {
-      setCriteria(data)
+      const event = events.find(item => item.id === eventId)
+      const defaults = pageantDefaults(event?.name ?? "")
+      if (initializeDefaults && profileId && event && canInitializePageantDefaults(event.name, event.status, data.length)) {
+        // Insert the complete rubric together. Unique event/order prevents duplicate defaults.
+        const { error: seedError } = await supabase.from("criteria").insert(
+          defaults.map(row => ({ ...row, event_id: eventId, created_by: profileId })),
+        )
+        if (seedError && seedError.code !== "23505") setError(`Could not load default rubric: ${seedError.message}`)
+        const { data: seeded, error: reloadError } = await supabase.from("criteria").select("*").eq("event_id", eventId).order("display_order")
+        if (request !== criteriaRequest.current) return
+        setCriteria(seeded ?? [])
+        if (reloadError) setError(reloadError.message)
+      } else setCriteria(data)
     }
     if (error) setError(error.message)
+    setCriteriaLoading(false)
   }
 
   useEffect(() => {
@@ -91,24 +114,26 @@ export default function CriteriaManager({
 
   useEffect(() => {
     if (selectedEventId) {
-      loadCriteria(selectedEventId)
+      loadCriteria(selectedEventId, true)
       setError("")
       setSuccess("")
     }
-  }, [selectedEventId])
+  }, [selectedEventId, events, profileId])
 
-  const totalWeight = criteria.reduce(
+  const totalWeight = Math.round(criteria.reduce(
     (sum, c) => sum + Number(c.weight_percentage),
     0,
-  )
+  ) * 100) / 100
+  const weightBudget = 100 - totalWeight + Number(criteria.find(c => c.id === editingId)?.weight_percentage ?? 0)
   const isLocked = criteria.some((c) => c.is_locked)
 
   async function handleAddCriterion(e: FormEvent) {
     e.preventDefault()
+    if (saving) return
     setError("")
     setSuccess("")
     if (!supabase || !selectedEventId || !profileId) {
-      setError("Select an event and sign in before saving a criterion.")
+      setError("Select a competition and sign in before saving a criterion.")
       return
     }
     if (isLocked) {
@@ -124,9 +149,9 @@ export default function CriteriaManager({
       setError("Weight percentage must be between 1% and 100%.")
       return
     }
-    if (totalWeight + weight > 100) {
+    if (weight > weightBudget) {
       setError(
-        `Adding ${weight}% would make the total ${totalWeight + weight}%, which exceeds 100%.`,
+        `Weight exceeds the available ${weightBudget}%. Reduce another criterion first.`,
       )
       return
     }
@@ -135,15 +160,19 @@ export default function CriteriaManager({
       return
     }
 
-    const { error: insErr } = await supabase.from("criteria").insert({
+    setSaving(true)
+    const values = {
       event_id: selectedEventId,
       name: form.name.trim(),
       description: form.description.trim() || null,
       weight_percentage: weight,
       max_score: maxScore,
       display_order: order,
-      created_by: profileId || null,
-    })
+    }
+    const { error: insErr } = editingId
+      ? await supabase.from("criteria").update(values).eq("id", editingId).eq("event_id", selectedEventId)
+      : await supabase.from("criteria").insert({ ...values, created_by: profileId })
+    setSaving(false)
 
     if (insErr) {
       setError(insErr.message)
@@ -158,7 +187,8 @@ export default function CriteriaManager({
       max_score: 100,
       display_order: criteria.length + 2,
     })
-    setSuccess("Criterion added successfully.")
+    setSuccess(editingId ? "Criterion updated successfully." : "Criterion added successfully.")
+    setEditingId(null)
     loadCriteria(selectedEventId)
   }
 
@@ -176,6 +206,29 @@ export default function CriteriaManager({
     }
   }
 
+  async function handleUnlockCriteria() {
+    if (!supabase || !selectedEventId || !isAdmin || saving) return
+    const eventId = selectedEventId
+    setError("")
+    setSuccess("")
+    setSaving(true)
+    try {
+      const { error: rpcErr } = await supabase.rpc("unlock_criteria_for_editing", {
+        event_uuid: eventId,
+      })
+      if (rpcErr) {
+        setError(rpcErr.message)
+        return
+      }
+      await loadCriteria(eventId)
+      setEvents(prev => prev.map(event => event.id === eventId ? { ...event, status: "draft" } : event))
+      setSuccess("Criteria unlocked. Edit the criteria, then lock them again to resume scoring.")
+    } catch {
+      setError("Could not unlock criteria. Please try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
   async function handleLockCriteria() {
     if (!supabase || !selectedEventId) return
     setError("")
@@ -196,7 +249,7 @@ export default function CriteriaManager({
       setError(rpcErr.message)
     } else {
       setSuccess(
-        "Criteria locked successfully! Scoring is now open for this event.",
+        "Criteria locked successfully! Scoring is now open for this competition.",
       )
       loadCriteria(selectedEventId)
       loadEvents()
@@ -219,30 +272,41 @@ export default function CriteriaManager({
                 setSuccess("")
                 if (!selectedEventId) {
                   setError(isAdmin
-                    ? "Create an event in Events, then select it here to add criteria."
-                    : "You need an assigned event before adding criteria. Ask an administrator to assign one.")
+                    ? "Create a competition in Competition, then select it here to add criteria."
+                    : "You need an assigned competition before adding criteria. Ask an administrator to assign one.")
                   return
                 }
                 if (totalWeight >= 100) {
                   setError("Criteria already total 100%. Delete an unlocked criterion to free up weight before adding another.")
                   return
                 }
+                setEditingId(null)
                 setForm((prev) => ({
                   ...prev,
                   weight_percentage: Math.min(20, 100 - totalWeight),
-                  display_order: criteria.length + 1,
+                  display_order: Math.max(0, ...criteria.map(c => c.display_order)) + 1,
                 }))
                 setShowModal(true)
               }}
-              disabled={loading}
+              disabled={loading || criteriaLoading || saving}
               className="border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658] disabled:opacity-50"
             >
               + Add Criterion
             </button>
           )}
+          {isLocked && isAdmin && (
+            <button
+              onClick={handleUnlockCriteria}
+              disabled={loading || criteriaLoading || saving}
+              className="border border-[#2a3441] px-4 py-2 text-xs font-bold text-[#2a3441] hover:bg-[#e8edf2] disabled:opacity-50"
+            >
+              {saving ? "Unlocking…" : "Unlock Criteria"}
+            </button>
+          )}
           {!isLocked && totalWeight === 100 && (
             <button
               onClick={handleLockCriteria}
+              disabled={criteriaLoading || saving}
               className="border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658]"
             >
               Lock Criteria for Scoring
@@ -262,14 +326,22 @@ export default function CriteriaManager({
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#ffffff] p-4 border border-[#17251d]/20">
         <div className="flex items-center gap-3">
           <label className="text-xs font-bold  text-[#61726a]">
-            Assigned Event:
+            Assigned Competition:
           </label>
           <select
             value={selectedEventId}
-            onChange={(e) => setSelectedEventId(e.target.value)}
+            disabled={saving}
+            onChange={(e) => {
+              criteriaRequest.current += 1
+              setCriteria([])
+              setCriteriaLoading(true)
+              setShowModal(false)
+              setEditingId(null)
+              setSelectedEventId(e.target.value)
+            }}
             className="border border-[#17251d]/30 bg-white px-3 py-1.5 text-sm font-semibold outline-none"
           >
             {events.map((ev) => (
@@ -278,7 +350,7 @@ export default function CriteriaManager({
               </option>
             ))}
             {events.length === 0 && (
-              <option value="">No events available</option>
+              <option value="">No competitions available</option>
             )}
           </select>
         </div>
@@ -299,7 +371,7 @@ export default function CriteriaManager({
             className={`rounded px-2 py-0.5 font-bold  ${
               isLocked
                 ? "bg-[#dfe5ec] text-[#2a3441]"
-                : "bg-[#fff3cf] text-[#a97b26]"
+                : "bg-[#f1f5f9] text-[#475569]"
             }`}
           >
             {isLocked ? "Locked (Scoring Open)" : "Configurable"}
@@ -309,12 +381,12 @@ export default function CriteriaManager({
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:py-12">
-          <div className="w-full max-w-lg border border-[#17251d]/30 bg-[#f8f6ee] p-6 shadow-xl">
+          <div className="w-full max-w-lg border border-[#17251d]/30 bg-[#ffffff] p-6 shadow-xl">
             <h2 className="font-sans text-lg font-semibold font-bold">
-              Add Criterion
+              {editingId ? "Edit Criterion" : "Add Criterion"}
             </h2>
             <p className="mt-1 text-xs text-[#61726a]">
-              Remaining weight budget: {100 - totalWeight}%
+              Remaining weight budget: {weightBudget}%
             </p>
             <form onSubmit={handleAddCriterion} className="mt-4 space-y-4">
               {error && <p role="alert" className="bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
@@ -352,7 +424,8 @@ export default function CriteriaManager({
                   <input
                     type="number"
                     min="1"
-                    max={100 - totalWeight}
+                    max={weightBudget}
+                    step="0.01"
                     required
                     value={form.weight_percentage}
                     onChange={(e) =>
@@ -407,9 +480,10 @@ export default function CriteriaManager({
                 </button>
                 <button
                   type="submit"
+                  disabled={saving}
                   className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658]"
                 >
-                  Save Criterion
+                  {saving ? "Saving?" : "Save Criterion"}
                 </button>
               </div>
             </form>
@@ -417,7 +491,7 @@ export default function CriteriaManager({
         </div>
       )}
 
-      {loading ? (
+      {loading || criteriaLoading ? (
         <p className="mt-8 text-xs text-[#61726a]">Loading criteria…</p>
       ) : criteria.length === 0 ? (
         <div className="mt-8 border-l border-[#2a3441] bg-[#e8edf2] p-6">
@@ -425,13 +499,19 @@ export default function CriteriaManager({
             No criteria configured yet
           </h2>
           <p className="mt-2 text-sm text-[#52655c]">
-            {isLocked
-              ? "This event has no criteria."
+            {pageantDefaults(events.find(event => event.id === selectedEventId)?.name ?? "").length > 0
+              ? "The default Mr. & Ms. CCS rubric has not been saved. Check any error above, then retry loading it."
               : "Click '+ Add Criterion' to specify the judging breakdown. Remember that the sum of percentage weights must equal exactly 100% before scoring can commence."}
           </p>
+          {events.some(event => event.id === selectedEventId && canInitializePageantDefaults(event.name, event.status, 0)) && (
+            <button
+              onClick={() => { setError(""); loadCriteria(selectedEventId, true) }}
+              className="mt-4 border border-[#2a3441] bg-[#2a3441] px-4 py-2 text-xs font-bold text-white"
+            >Load Default Rubric</button>
+          )}
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
+        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#ffffff]">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
               <tr>
@@ -450,7 +530,7 @@ export default function CriteriaManager({
                   <td className="p-3 font-semibold">
                     {c.name}
                     {c.description && (
-                      <p className="text-xs font-normal text-[#61726a]">
+                      <p className="mt-1 whitespace-pre-line text-xs font-normal text-[#61726a]">
                         {c.description}
                       </p>
                     )}
@@ -463,11 +543,20 @@ export default function CriteriaManager({
                     {c.is_locked ? (
                       <span className="text-[#2a3441]">Locked</span>
                     ) : (
-                      <span className="text-[#a97b26]">Draft</span>
+                      <span className="text-[#475569]">Draft</span>
                     )}
                   </td>
                   {!isLocked && (
                     <td className="p-3 text-right">
+                      <button
+                        onClick={() => {
+                          setEditingId(c.id)
+                          setForm({ name: c.name, description: c.description ?? "", weight_percentage: Number(c.weight_percentage), max_score: Number(c.max_score), display_order: c.display_order })
+                          setError("")
+                          setShowModal(true)
+                        }}
+                        className="mr-2 border border-[#17251d]/30 px-2 py-1 text-xs hover:bg-[#e8edf2]"
+                      >Edit</button>
                       <button
                         onClick={() => handleDelete(c.id)}
                         className="border border-[#a23b30]/40 px-2 py-1 text-xs text-[#a23b30] hover:bg-[#f3e2dc]"
@@ -496,7 +585,7 @@ export default function CriteriaManager({
                   className="p-3 text-right font-normal text-[#61726a]"
                 >
                   {totalWeight === 100
-                    ? "Weight target reached (100%). Ready to lock."
+                    ? "Weight target reached (100%)"
                     : `Need ${100 - totalWeight}% more to lock criteria.`}
                 </td>
               </tr>

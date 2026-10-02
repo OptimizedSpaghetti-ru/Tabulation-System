@@ -1,3 +1,4 @@
+import { getDefaultEventId } from "../lib/default-event"
 import { useEffect, useState } from "react"
 import { NavLink } from "react-router"
 import { supabase } from "../lib/supabase"
@@ -5,7 +6,6 @@ import { supabase } from "../lib/supabase"
 type PublishedEvent = {
   id: string;
   name: string;
-  competitions: { name: string; academic_year: string } | null
 }
 type PublishedResult = {
   id: string;
@@ -35,7 +35,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
         const [eventResponse, resultResponse] = await Promise.all([
           supabase
             .from("events")
-            .select("id,name,competitions(name,academic_year)")
+            .select("id,name")
             .eq("status", "published")
             .order("name"),
           supabase
@@ -58,7 +58,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
         setEventId((current) =>
           published.some((event) => event.id === current)
             ? current
-            : (published[0]?.id ?? ""),
+            : getDefaultEventId(published),
         )
         setState("ready")
       } catch {
@@ -87,14 +87,14 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
   const refresh = () => setAttempt((value) => value + 1)
 
   return (
-    <main className="public-results min-h-screen bg-[#f1efe6] text-[#17251d]">
+    <main className="public-results min-h-screen bg-[#f3f4f6] text-[#17251d]">
       <a
         href="#published-results"
         className="sr-only focus:not-sr-only focus:absolute focus:z-10 focus:bg-white focus:p-3"
       >
         Skip to results
       </a>
-      <header className="border-b border-[#17251d]/20 bg-[#f8f6ee]">
+      <header className="border-b border-[#17251d]/20 bg-[#ffffff]">
         <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-4 px-5 py-5 md:grid-cols-[1fr_auto_1fr]">
           <NavLink
             to="/results"
@@ -119,7 +119,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
           Competition results
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-[#52655c]">
-          Official rankings for published events. Only finalized results are
+          Official rankings for published competitions. Only finalized results are
           listed; individual judge scores remain private.
         </p>
         <div
@@ -134,10 +134,10 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
               ? "Results could not be loaded."
               : selected
                 ? `${selected.name}: ${visible.length} of ${eventResults.length} contestants shown.`
-                : "No published events yet."}
+                : "No published competitions yet."}
         </div>
         {state === "error" && (
-          <div className="mt-10 border border-[#a23b30]/40 bg-[#f8f6ee] p-5 sm:p-7">
+          <div className="mt-10 border border-[#a23b30]/40 bg-[#ffffff] p-5 sm:p-7">
             <h2 className="font-display text-2xl">
               Results could not be loaded
             </h2>
@@ -154,10 +154,10 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
           </div>
         )}
         {state === "ready" && !events.length && (
-          <div className="mt-10 border border-[#17251d]/20 bg-[#f8f6ee] p-5 sm:p-7">
+          <div className="mt-10 border border-[#17251d]/20 bg-[#ffffff] p-5 sm:p-7">
             <h2 className="font-display text-2xl">Awaiting publication</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52655c]">
-              No events have published results yet. Check again after the
+              No competitions have published results yet. Check again after the
               organizers announce publication, or ask the College of Computer
               Studies administration for an update.
             </p>
@@ -173,7 +173,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
           <>
             <div className="mt-6 grid max-w-xl gap-4 border-y border-[#17251d]/20 py-4">
               <label className="grid gap-2 text-sm font-semibold">
-                Published event
+                Published competition
                 <select
                   value={eventId}
                   onChange={(event) => {
@@ -184,9 +184,6 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
                 >
                   {events.map((event) => (
                     <option key={event.id} value={event.id}>
-                      {event.competitions
-                        ? `${event.competitions.name} — `
-                        : ""}
                       {event.name}
                     </option>
                   ))}
@@ -205,12 +202,6 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
             </div>
             <div className="mt-8 flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
-                {selected.competitions && (
-                  <p className="break-words text-sm text-[#52655c]">
-                    {selected.competitions.name} ·{" "}
-                    {selected.competitions.academic_year}
-                  </p>
-                )}
                 <h2 className="mt-1 break-words font-display text-3xl tracking-[-.02em]">
                   {selected.name}
                 </h2>
@@ -237,7 +228,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
             </p>
             {visible.length ? (
               <>
-                <table className="mt-4 hidden w-full table-fixed border border-[#17251d]/20 bg-[#f8f6ee] sm:table">
+                <table className="mt-4 hidden w-full table-fixed border border-[#17251d]/20 bg-[#ffffff] sm:table">
                   <caption className="sr-only">
                     Official rankings for {selected.name}
                   </caption>
@@ -284,7 +275,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
                 </table>
                 <ol
                   aria-label={`Official rankings for ${selected.name}`}
-                  className="mt-4 border border-[#17251d]/20 bg-[#f8f6ee] sm:hidden"
+                  className="mt-4 border border-[#17251d]/20 bg-[#ffffff] sm:hidden"
                 >
                   {visible.map((result) => (
                     <li
@@ -321,7 +312,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
                 </ol>
               </>
             ) : (
-              <div className="mt-4 border border-[#17251d]/20 bg-[#f8f6ee] p-5">
+              <div className="mt-4 border border-[#17251d]/20 bg-[#ffffff] p-5">
                 <h3 className="font-semibold">
                   {eventResults.length
                     ? "No matching contestants"
@@ -330,7 +321,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
                 <p className="mt-2 text-sm leading-6 text-[#52655c]">
                   {eventResults.length
                     ? "Try another name or contestant number."
-                    : "This event is published, but no finalized rankings are available. Ask the College of Computer Studies administration for an update."}
+                    : "This competition is published, but no finalized rankings are available. Ask the College of Computer Studies administration for an update."}
                 </p>
                 {search && (
                   <button
@@ -351,7 +342,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
                   Final scores average the weighted totals from submitted judge
                   score sheets. Each criterion contributes its raw score
                   multiplied by its percentage weight. The score scale depends
-                  on the event’s criteria; scores from different events should
+                  on the competition’s criteria; scores from different competitions should
                   not be compared.
                 </p>
                 <p>
@@ -361,7 +352,7 @@ export default function PublicResults({ brand }: { brand: React.ReactNode }) {
                   scores can have different ranks.
                 </p>
                 <p>
-                  For questions about an outcome or the event’s criteria, ask
+                  For questions about an outcome or the competition’s criteria, ask
                   the College of Computer Studies administration.
                 </p>
               </div>

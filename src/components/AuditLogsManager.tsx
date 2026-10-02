@@ -62,7 +62,7 @@ export default function AuditLogsManager() {
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
+        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#ffffff]">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
               <tr>
@@ -84,7 +84,7 @@ export default function AuditLogsManager() {
                         log.action === "insert"
                           ? "bg-[#dfe5ec] text-[#2a3441]"
                           : log.action === "update"
-                            ? "bg-[#fff3cf] text-[#a97b26]"
+                            ? "bg-[#f1f5f9] text-[#475569]"
                             : "bg-[#f3e2dc] text-[#a23b30]"
                       }`}
                     >

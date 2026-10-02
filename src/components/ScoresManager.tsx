@@ -1,106 +1,176 @@
+import { getDefaultEventId } from "../lib/default-event"
 import { useEffect, useState } from "react"
+
 import { supabase } from "../lib/supabase"
 
+import ContestantPhoto from "./ContestantPhoto"
+
 type EventItem = { id: string; name: string; status: string }
+
 type Criterion = {
-  id: string;
-  name: string;
-  weight_percentage: number;
+  id: string
+
+  name: string
+
+  weight_percentage: number
+
   max_score: number
 }
-type Contestant = { id: string; contestant_number: string; full_name: string }
+
+type Contestant = {
+  id: string
+  contestant_number: string
+  full_name: string
+  photo_path: string | null
+}
 
 export default function ScoresManager({
   isAdmin,
+
   profileId,
 }: {
   isAdmin: boolean
+
   profileId?: string
 }) {
   const [events, setEvents] = useState<EventItem[]>([])
+
   const [selectedEventId, setSelectedEventId] = useState("")
+
   const [criteria, setCriteria] = useState<Criterion[]>([])
+
   const [contestants, setContestants] = useState<Contestant[]>([])
+
   const [scores, setScores] = useState<Record<string, Record<string, number>>>(
     {},
   ) // [contestantId][criterionId] = rawScore
+
   const [sheetStatus, setSheetStatus] = useState<string>("draft")
+
   const [loading, setLoading] = useState(true)
+
   const [error, setError] = useState("")
+
   const [success, setSuccess] = useState("")
 
   async function loadEvents() {
     if (!supabase) return
+
     setLoading(true)
+
     let eventList: EventItem[] = []
 
     if (isAdmin) {
       const { data } = await supabase
+
         .from("events")
+
         .select("id, name, status")
+
         .order("name")
+
       if (data) eventList = data
     } else if (profileId) {
       const { data } = await supabase
+
         .from("judge_event_assignments")
+
         .select("event_id, events(id, name, status)")
+
         .eq("judge_id", profileId)
+
         .eq("status", "active")
+
       if (data) eventList = data.map((d: any) => d.events).filter(Boolean)
     }
 
     setEvents(eventList)
+
     if (eventList.length > 0) {
-      setSelectedEventId(eventList[0].id)
+      setSelectedEventId(getDefaultEventId(eventList))
     }
+
     setLoading(false)
   }
 
   async function loadEventScoringData(eventId: string) {
     if (!supabase || !eventId || !profileId) return
+
     setLoading(true)
+
     setError("")
+
     setSuccess("")
 
     // Load criteria
+
     const { data: critData } = await supabase
+
       .from("criteria")
+
       .select("id, name, weight_percentage, max_score")
+
       .eq("event_id", eventId)
+
       .eq("is_locked", true)
+
       .order("display_order")
+
     setCriteria(critData || [])
 
-    // Load contestants for this event
+    // Load contestants for this competition
+
     const { data: ecData } = await supabase
+
       .from("event_contestants")
-      .select("contestant_id, contestants(id, contestant_number, full_name)")
+
+      .select(
+        "contestant_id, contestants(id, contestant_number, full_name, photo_path)",
+      )
+
       .eq("event_id", eventId)
+
     const contList =
       ecData?.map((ec: any) => ec.contestants).filter(Boolean) || []
+
     setContestants(contList)
 
     // Load judge score sheet status
+
     const { data: sheetData } = await supabase
+
       .from("score_sheets")
+
       .select("status")
+
       .eq("event_id", eventId)
+
       .eq("judge_id", profileId)
+
       .maybeSingle()
+
     setSheetStatus(sheetData?.status || "draft")
 
     // Load existing scores
+
     const { data: scoreData } = await supabase
+
       .from("scores")
+
       .select("contestant_id, criterion_id, raw_score")
+
       .eq("event_id", eventId)
+
       .eq("judge_id", profileId)
 
     const scoreMap: Record<string, Record<string, number>> = {}
+
     scoreData?.forEach((s) => {
       if (!scoreMap[s.contestant_id]) scoreMap[s.contestant_id] = {}
+
       scoreMap[s.contestant_id][s.criterion_id] = Number(s.raw_score)
     })
+
     setScores(scoreMap)
 
     setLoading(false)
@@ -118,23 +188,33 @@ export default function ScoresManager({
 
   function handleScoreChange(
     contestantId: string,
+
     criterionId: string,
+
     value: string,
+
     maxScore: number,
   ) {
     if (sheetStatus === "submitted") return
+
     const num = Number(value)
+
     if (num < 0) return
+
     if (num > maxScore) {
       setError(`Score cannot exceed max score of ${maxScore}.`)
+
       return
     }
+
     setError("")
 
     setScores((prev) => ({
       ...prev,
+
       [contestantId]: {
         ...(prev[contestantId] || {}),
+
         [criterionId]: num,
       },
     }))
@@ -142,17 +222,24 @@ export default function ScoresManager({
 
   async function handleSaveDraft() {
     if (!supabase || !profileId || !selectedEventId) return
+
     setError("")
+
     setSuccess("")
 
     const scoreInserts: any[] = []
+
     Object.entries(scores).forEach(([cId, critScores]) => {
       Object.entries(critScores).forEach(([critId, raw]) => {
         scoreInserts.push({
           judge_id: profileId,
+
           event_id: selectedEventId,
+
           contestant_id: cId,
+
           criterion_id: critId,
+
           raw_score: raw,
         })
       })
@@ -160,11 +247,14 @@ export default function ScoresManager({
 
     if (scoreInserts.length === 0) {
       setError("No scores entered to save.")
+
       return
     }
 
     const { error: upsertErr } = await supabase
+
       .from("scores")
+
       .upsert(scoreInserts, {
         onConflict: "judge_id,event_id,contestant_id,criterion_id",
       })
@@ -178,26 +268,33 @@ export default function ScoresManager({
 
   async function handleSubmitOfficial() {
     if (!supabase || !selectedEventId) return
+
     setError("")
+
     setSuccess("")
 
     // Check that all scores are filled
+
     for (const c of contestants) {
       for (const crit of criteria) {
         const val = scores[c.id]?.[crit.id]
+
         if (val === undefined || val === null || isNaN(val)) {
           setError(
             `Missing score for ${c.full_name} under criterion '${crit.name}'. All scores must be recorded before submission.`,
           )
+
           return
         }
       }
     }
 
     // Save current scores first
+
     await handleSaveDraft()
 
     // Call submit_score_sheet RPC
+
     const { error: rpcErr } = await supabase.rpc("submit_score_sheet", {
       event_uuid: selectedEventId,
     })
@@ -208,6 +305,7 @@ export default function ScoresManager({
       setSuccess(
         "Score sheet officially submitted! Tabulation has been updated.",
       )
+
       setSheetStatus("submitted")
     }
   }
@@ -255,9 +353,11 @@ export default function ScoresManager({
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#ffffff] p-4 border border-[#17251d]/20">
         <div className="flex items-center gap-3">
-          <label className="text-xs font-bold  text-[#61726a]">Event:</label>
+          <label className="text-xs font-bold  text-[#61726a]">
+            Competition:
+          </label>
           <select
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
@@ -269,7 +369,7 @@ export default function ScoresManager({
               </option>
             ))}
             {events.length === 0 && (
-              <option value="">No events assigned</option>
+              <option value="">No competitions assigned</option>
             )}
           </select>
         </div>
@@ -280,7 +380,7 @@ export default function ScoresManager({
             className={`rounded px-2 py-0.5 font-bold  ${
               sheetStatus === "submitted"
                 ? "bg-[#dfe5ec] text-[#2a3441]"
-                : "bg-[#fff3cf] text-[#a97b26]"
+                : "bg-[#f1f5f9] text-[#475569]"
             }`}
           >
             {sheetStatus === "submitted"
@@ -298,9 +398,9 @@ export default function ScoresManager({
             Criteria Not Locked for Scoring
           </h2>
           <p className="mt-2 text-sm text-[#70271f]">
-            This event does not have finalized and locked criteria totaling
-            100%. Please configure and lock criteria in the Criteria tab before
-            scoring can begin.
+            This competition does not have finalized and locked criteria
+            totaling 100%. Please configure and lock criteria in the Criteria
+            tab before scoring can begin.
           </p>
         </div>
       ) : contestants.length === 0 ? (
@@ -309,13 +409,13 @@ export default function ScoresManager({
             No Contestants Registered
           </h2>
           <p className="mt-2 text-sm text-[#52655c]">
-            There are no contestants currently registered for this event. An
-            administrator must register contestants before you can submit
+            There are no contestants currently registered for this competition.
+            An administrator must register contestants before you can submit
             scores.
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
+        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#ffffff]">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
               <tr>
@@ -334,20 +434,31 @@ export default function ScoresManager({
             <tbody className="divide-y divide-[#17251d]/10">
               {contestants.map((c) => {
                 let totalJudgeScore = 0
+
                 return (
                   <tr key={c.id} className="hover:bg-white/50">
                     <td className="p-3">
-                      <span className="font-mono font-bold text-[#2a3441]">
-                        {c.contestant_number}
-                      </span>
-                      <p className="font-semibold">{c.full_name}</p>
+                      <div className="flex items-center gap-3">
+                        <ContestantPhoto
+                          path={c.photo_path}
+                          name={c.full_name}
+                        />
+                        <div>
+                          <span className="font-mono font-bold text-[#2a3441]">
+                            {c.contestant_number}
+                          </span>
+                          <p className="font-semibold">{c.full_name}</p>
+                        </div>
+                      </div>
                     </td>
                     {criteria.map((crit) => {
                       const raw = scores[c.id]?.[crit.id]
+
                       const weighted =
                         typeof raw === "number"
                           ? (raw * Number(crit.weight_percentage)) / 100
                           : 0
+
                       totalJudgeScore += weighted
 
                       return (
@@ -362,8 +473,11 @@ export default function ScoresManager({
                             onChange={(e) =>
                               handleScoreChange(
                                 c.id,
+
                                 crit.id,
+
                                 e.target.value,
+
                                 crit.max_score,
                               )
                             }

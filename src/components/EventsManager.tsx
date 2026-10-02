@@ -1,19 +1,21 @@
 import { FormEvent, useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
 
-type Competition = { id: string; name: string }
 type EventItem = {
   id: string;
-  competition_id: string;
   name: string;
   description: string | null
   event_type: string;
   participation_type: string;
   status: string;
-  competitions?: { name: string }
 }
 
 const OFFICIAL_EVENTS = [
+  {
+    name: "Mr. and Ms. CCS",
+    event_type: "performance",
+    participation_type: "individual",
+  },
   {
     name: "Quiz Bee",
     event_type: "knowledge",
@@ -35,14 +37,9 @@ const OFFICIAL_EVENTS = [
     participation_type: "team",
   },
   {
-    name: "Dance Competition",
-    event_type: "performance",
+    name: "Networking Competition",
+    event_type: "technical",
     participation_type: "team",
-  },
-  {
-    name: "Pageant",
-    event_type: "performance",
-    participation_type: "individual",
   },
 ]
 
@@ -56,8 +53,6 @@ export default function EventsManager({
   onNavigate?: (page: string) => void
 }) {
   const [events, setEvents] = useState<EventItem[]>([])
-  const [competitions, setCompetitions] = useState<Competition[]>([])
-  const [selectedCompId, setSelectedCompId] = useState<string>("")
   const [assignedEventIds, setAssignedEventIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -74,36 +69,52 @@ export default function EventsManager({
 
   async function loadData() {
     if (!supabase) {
-      setError("Database connection is unavailable. Configure Supabase to manage events.")
+      setError("Database connection is unavailable. Configure Supabase to manage competitions.")
       setLoading(false)
       return
     }
     setLoading(true)
     try {
-    // Load competitions
-    const { data: compData, error: compError } = await supabase
-      .from("competitions")
-      .select("id, name")
-      .order("created_at", { ascending: false })
-    if (compError) setError(`Could not load competitions: ${compError.message}`)
-    if (compData) {
-      setCompetitions(compData)
-      if (!compData.some((competition) => competition.id === selectedCompId)) {
-        setSelectedCompId(compData[0]?.id || "")
+    setError("")
+    // Reconcile official defaults in place to preserve linked records.
+    if (isAdmin && profileId) {
+      const { data: existing, error: existingError } = await supabase.from("events").select("id, name")
+      if (existingError) throw existingError
+      const names = new Set((existing ?? []).map((event) => event.name))
+      for (const [oldName, name, event_type] of [
+        ["Pageant", "Mr. and Ms. CCS", "performance"],
+        ["Dance Competition", "Networking Competition", "technical"],
+      ]) {
+        if (names.has(oldName) && !names.has(name)) {
+          const { error: renameError } = await supabase.from("events").update({ name, event_type }).eq("name", oldName)
+          if (renameError) throw renameError
+          names.delete(oldName)
+          names.add(name)
+        }
+      }
+      const missing = OFFICIAL_EVENTS.filter((event) => !names.has(event.name))
+      if (missing.length) {
+        const { error: seedError } = await supabase.from("events").insert(
+          missing.map((event) => ({ ...event, status: "draft", created_by: profileId })),
+        )
+        if (seedError) throw seedError
       }
     }
-
     // Load events
     let query = supabase
       .from("events")
       .select(
-        "id, competition_id, name, description, event_type, participation_type, status, competitions(name)",
+        "id, name, description, event_type, participation_type, status",
       )
       .order("name")
     const { data: eventData, error: eventError } = await query
-    if (eventError) setError(`Could not load events: ${eventError.message}`)
+    if (eventError) setError(`Could not load competitions: ${eventError.message}`)
     if (eventData) {
-      setEvents(eventData as unknown as EventItem[])
+      const order = new Map(OFFICIAL_EVENTS.map((event, index) => [event.name, index]))
+      setEvents((eventData as unknown as EventItem[]).sort((a, b) =>
+        (order.get(a.name) ?? OFFICIAL_EVENTS.length) - (order.get(b.name) ?? OFFICIAL_EVENTS.length)
+        || a.name.localeCompare(b.name),
+      ))
     }
 
     // Load judge assignments
@@ -118,7 +129,7 @@ export default function EventsManager({
       }
     }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load events. Please try again.")
+      setError(err instanceof Error ? err.message : "Could not load competitions. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -126,66 +137,30 @@ export default function EventsManager({
 
   useEffect(() => {
     loadData()
-  }, [profileId])
+  }, [profileId, isAdmin])
 
-  const filteredEvents = selectedCompId
-    ? events.filter((e) => e.competition_id === selectedCompId)
-    : events
-
-  async function handleSeedOfficial() {
-    if (!supabase || !selectedCompId || !isAdmin) return
-    setError("")
-    setInfoMsg("")
-    try {
-      const inserts = OFFICIAL_EVENTS.map((oe) => ({
-        competition_id: selectedCompId,
-        name: oe.name,
-        event_type: oe.event_type,
-        participation_type: oe.participation_type,
-        status: "draft",
-        created_by: profileId || null,
-      }))
-
-      const { error: seedErr } = await supabase
-        .from("events")
-        .upsert(inserts, { onConflict: "competition_id,name" })
-      if (seedErr) {
-        setError(seedErr.message)
-      } else {
-        setInfoMsg("Successfully seeded the 6 official CCS events!")
-        loadData()
-      }
-    } catch (e: any) {
-      setError(e.message)
-    }
-  }
-
+  const visibleEvents = isAdmin ? events : events.filter((event) => assignedEventIds.includes(event.id))
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
     setError("")
     setInfoMsg("")
     if (saving) return
     if (!supabase) {
-      setError("Database connection is unavailable. Configure Supabase before creating an event.")
-      return
-    }
-    if (!selectedCompId) {
-      setError("Create or select a competition before creating an event.")
+      setError("Database connection is unavailable. Configure Supabase before creating a competition.")
       return
     }
     if (!isAdmin || !profileId) {
-      setError("Sign in as an administrator to create an event.")
+      setError("Sign in as an administrator to create a competition.")
       return
     }
     if (form.name.trim().length < 2) {
-      setError("Event name must be at least 2 characters.")
+      setError("Competition name must be at least 2 characters.")
       return
     }
 
     setSaving(true)
     try {
     const { error: insertError } = await supabase.from("events").insert({
-      competition_id: selectedCompId,
       name: form.name.trim(),
       description: form.description.trim() || null,
       event_type: form.event_type,
@@ -207,10 +182,10 @@ export default function EventsManager({
       participation_type: "individual",
       status: "draft",
     })
-    setInfoMsg("Event created successfully.")
+    setInfoMsg("Competition created successfully.")
     await loadData()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create the event. Please try again.")
+      setError(err instanceof Error ? err.message : "Could not create the competition. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -228,21 +203,9 @@ export default function EventsManager({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#17251d]/20 pb-5">
-        <div>
-          <h1 className="font-sans text-[28px] font-semibold leading-9 tracking-[-.02em]">
-            Competition Events
-          </h1>
-        </div>
+
         {isAdmin && (
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleSeedOfficial}
-              disabled={!selectedCompId}
-              className="border border-[#17251d]/30 bg-white px-3 py-2 text-xs font-bold  text-[#2a3441] hover:bg-[#e8edf2] disabled:opacity-50"
-              title="Populates the 6 official OLFU CCS events (Quiz Bee, Programming, Linux, PC Assembly, Dance, Pageant)"
-            >
-              Seed Official 6 Events
-            </button>
             <button
               onClick={() => {
                 setError("")
@@ -251,7 +214,7 @@ export default function EventsManager({
               }}
               className="bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658] disabled:opacity-50"
             >
-              + Add Event
+              + Add Competition
             </button>
           </div>
         )}
@@ -268,61 +231,19 @@ export default function EventsManager({
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
-        <label className="text-xs font-bold  text-[#61726a]">
-          Active Competition:
-        </label>
-        <select
-          value={selectedCompId}
-          onChange={(e) => setSelectedCompId(e.target.value)}
-          className="border border-[#17251d]/30 bg-white px-3 py-1.5 text-sm font-semibold outline-none"
-        >
-          {competitions.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-          {competitions.length === 0 && (
-            <option value="">No competitions found</option>
-          )}
-        </select>
-      </div>
-
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:py-12">
-          <div className="w-full max-w-lg border border-[#17251d]/30 bg-[#f8f6ee] p-6 shadow-xl">
+          <div className="w-full max-w-lg border border-[#17251d]/30 bg-[#ffffff] p-6 shadow-xl">
             <h2 className="font-sans text-lg font-semibold font-bold">
-              Add Event
+              Add Competition
             </h2>
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
               {error && (
                 <p role="alert" className="bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>
               )}
               <div>
-                <label htmlFor="event-competition" className="block text-xs font-semibold">Competition</label>
-                <select
-                  id="event-competition"
-                  required
-                  value={selectedCompId}
-                  onChange={(e) => setSelectedCompId(e.target.value)}
-                  disabled={loading || saving}
-                  className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm"
-                >
-                  <option value="">{loading ? "Loading competitions…" : "Select a competition"}</option>
-                  {competitions.map((competition) => (
-                    <option key={competition.id} value={competition.id}>{competition.name}</option>
-                  ))}
-                </select>
-                {!loading && competitions.length === 0 && (
-                  <div className="mt-2 text-sm text-[#52655c]">
-                    <p>Create a competition first. Each event must belong to a competition.</p>
-                    {onNavigate && <button type="button" onClick={() => onNavigate("competitions")} className="mt-2 underline underline-offset-4">Go to Competitions</button>}
-                  </div>
-                )}
-              </div>
-              <div>
                 <label className="block text-xs font-semibold">
-                  Event Name
+                  Competition Name
                 </label>
                 <input
                   required
@@ -349,7 +270,7 @@ export default function EventsManager({
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-xs font-semibold">
-                    Event Type
+                    Competition Type
                   </label>
                   <select
                     value={form.event_type}
@@ -391,10 +312,10 @@ export default function EventsManager({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || loading || !selectedCompId}
+                  disabled={saving || loading}
                   className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658]"
                 >
-                  {saving ? "Creating Event…" : "Create Event"}
+                  {saving ? "Creating Competition…" : "Create Competition"}
                 </button>
               </div>
             </form>
@@ -403,22 +324,22 @@ export default function EventsManager({
       )}
 
       {loading ? (
-        <p className="mt-8 text-xs text-[#61726a]">Loading events…</p>
-      ) : filteredEvents.length === 0 ? (
+        <p className="mt-8 text-xs text-[#61726a]">Loading competitions…</p>
+      ) : visibleEvents.length === 0 ? (
         <div className="mt-8 border-l border-[#2a3441] bg-[#e8edf2] p-6">
-          <h2 className="font-sans text-lg font-semibold">No events found</h2>
+          <h2 className="font-sans text-lg font-semibold">No competitions found</h2>
           <p className="mt-2 text-sm text-[#52655c]">
             {isAdmin
-              ? "Click 'Seed Official 6 Events' to automatically load the department competitions, or click '+ Add Event' to create a custom one."
-              : "No events are assigned to your profile yet."}
+              ? "Official competitions load automatically. If loading failed, refresh to try again."
+              : "No competitions are assigned to your profile yet."}
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
+        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#ffffff]">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
               <tr>
-                <th className="p-3">Event Name</th>
+                <th className="p-3">Competition Name</th>
                 <th className="p-3">Type</th>
                 <th className="p-3">Format</th>
                 <th className="p-3">Status</th>
@@ -426,7 +347,7 @@ export default function EventsManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#17251d]/10">
-              {filteredEvents.map((ev) => {
+              {visibleEvents.map((ev) => {
                 const isAssigned = assignedEventIds.includes(ev.id)
                 return (
                   <tr key={ev.id} className="hover:bg-white/50">
@@ -435,7 +356,7 @@ export default function EventsManager({
                         <span>{ev.name}</span>
                         {isAssigned && (
                           <span className="rounded bg-[#2a3441] px-1.5 py-0.5 text-xs font-bold  text-white">
-                            Your Event
+                            Your Competition
                           </span>
                         )}
                       </div>
@@ -466,12 +387,12 @@ export default function EventsManager({
                             >
                               Criteria
                             </button>
-                            <button
+                            {!isAdmin && isAssigned && <button
                               onClick={() => onNavigate("scores")}
                               className="bg-[#2a3441] px-2 py-1 text-xs font-bold text-white hover:bg-[#394658]"
                             >
                               Scoring
-                            </button>
+                            </button>}
                           </>
                         )}
                         {isAdmin && (

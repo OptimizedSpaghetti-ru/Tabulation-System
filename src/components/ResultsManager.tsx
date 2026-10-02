@@ -1,3 +1,4 @@
+import { getDefaultEventId } from "../lib/default-event"
 import { useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
 
@@ -48,7 +49,7 @@ export default function ResultsManager({
       .order("name")
     if (data && data.length > 0) {
       setEvents(data)
-      if (!selectedEventId) setSelectedEventId(data[0].id)
+      if (!selectedEventId) setSelectedEventId(getDefaultEventId(data))
     }
     setLoading(false)
   }
@@ -148,7 +149,7 @@ export default function ResultsManager({
     })
     if (rpcErr) setError(rpcErr.message)
     else {
-      setSuccess("Event scoring has been reopened for judges.")
+      setSuccess("Competition scoring has been reopened for judges.")
       loadResults(selectedEventId)
       loadEvents()
     }
@@ -164,7 +165,7 @@ export default function ResultsManager({
             {viewMode === "winners"
               ? "Official Winners"
               : viewMode === "rankings"
-                ? "Event Rankings"
+                ? "Competition Rankings"
                 : "Official Tabulation & Results"}
           </h1>
         </div>
@@ -207,10 +208,10 @@ export default function ResultsManager({
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#f8f6ee] p-4 border border-[#17251d]/20">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 bg-[#ffffff] p-4 border border-[#17251d]/20">
         <div className="flex items-center gap-3">
           <label className="text-xs font-bold  text-[#61726a]">
-            Select Event:
+            Select Competition:
           </label>
           <select
             value={selectedEventId}
@@ -288,7 +289,7 @@ export default function ResultsManager({
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
+        <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#ffffff]">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
               <tr>
@@ -311,7 +312,7 @@ export default function ResultsManager({
                           : r.rank === 2
                             ? "bg-[#61726a] text-white"
                             : r.rank === 3
-                              ? "bg-[#a97b26] text-white"
+                              ? "bg-[#475569] text-white"
                               : "text-[#17251d]"
                       }`}
                     >

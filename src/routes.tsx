@@ -1,3 +1,4 @@
+import { canAccessPage, navigationForRole } from "./lib/role-access"
 import {
   createBrowserRouter,
   Navigate,
@@ -8,13 +9,11 @@ import {
 } from "react-router"
 import { FormEvent, ReactNode, useEffect, useState } from "react"
 import {
-  authEmailToUsername,
   isSupabaseConfigured,
   isValidUsername,
   supabase,
   usernameToAuthEmail,
 } from "./lib/supabase"
-import CompetitionsManager from "./components/CompetitionsManager"
 import EventsManager from "./components/EventsManager"
 import ContestantsManager from "./components/ContestantsManager"
 import JudgesManager from "./components/JudgesManager"
@@ -24,22 +23,6 @@ import ResultsManager from "./components/ResultsManager"
 import AuditLogsManager from "./components/AuditLogsManager"
 import PublicResults from "./components/PublicResults"
 
-const nav = [
-  "Dashboard",
-  "Competitions",
-  "Events",
-  "Contestants",
-  "Judges",
-  "Assign Judges",
-  "Criteria",
-  "Scores",
-  "Tabulation",
-  "Rankings",
-  "Winners",
-  "Results",
-  "Audit Logs",
-  "Settings",
-]
 const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/
 
 type ProfileContext = {
@@ -88,7 +71,7 @@ function Brand({ showSystemName = false }: { showSystemName?: boolean }) {
 
 function SetupNotice() {
   return !isSupabaseConfigured ? (
-    <div className="border-b border-[#a97b26] bg-[#fff3cf] px-5 py-3 text-center text-xs text-[#624815]">
+    <div className="border-b border-[#475569] bg-[#f1f5f9] px-5 py-3 text-center text-xs text-[#334155]">
       Database connection pending. Add{" "}
       <code className="font-mono">VITE_SUPABASE_URL</code> and{" "}
       <code className="font-mono">VITE_SUPABASE_ANON_KEY</code> after creating
@@ -99,7 +82,7 @@ function SetupNotice() {
 
 function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <main className="auth-page min-h-screen bg-[#f1efe6] text-[#17251d]">
+    <main className="auth-page min-h-screen bg-[#f3f4f6] text-[#17251d]">
       <SetupNotice />
       <div className="mx-auto w-full max-w-[440px] px-5 py-6 sm:py-12">
         <header className="border-b border-[#17251d]/15 pb-5 text-center">
@@ -169,11 +152,11 @@ function Login() {
           Sign in
         </h1>
         <p className="mt-2 mb-5 text-sm leading-6 text-[#61726a]">
-          For administrators and approved judges.
+          For administrators and judges.
         </p>
         <Field
           label="Username"
-          placeholder="e.g. admin or judge1"
+          placeholder=""
           value={username}
           onChange={setUsername}
           autoComplete="username"
@@ -291,7 +274,7 @@ function Register() {
           Request judge access
         </h1>
         <p className="mt-2 text-sm leading-6 text-[#61726a]">
-          Your registration is reviewed before any event is assigned.
+          Your registration is reviewed before any competition is assigned.
         </p>
         <div className="mt-5 space-y-4">
           <Field
@@ -392,12 +375,15 @@ function Application() {
 
   useEffect(() => {
     async function load() {
-      if (!supabase) return setLoading(false)
+      if (!supabase) {
+        navigate("/login", { replace: true })
+        return
+      }
       const {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        navigate("/login")
+        navigate("/login", { replace: true })
         return
       }
       const { data } = await supabase
@@ -405,9 +391,9 @@ function Application() {
         .select("id,full_name,role,status,email")
         .eq("auth_user_id", user.id)
         .single()
-      if (!data || data.status !== "active") {
+      if (!data || data.status !== "active" || !["admin", "judge"].includes(data.role)) {
         await supabase.auth.signOut()
-        navigate("/login")
+        navigate("/login", { replace: true })
         return
       }
       setProfile(data)
@@ -418,60 +404,32 @@ function Application() {
 
   async function logout() {
     await supabase?.auth.signOut()
-    navigate("/login")
+    navigate("/login", { replace: true })
   }
 
   if (loading)
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f1efe6] text-xs text-[#61726a]">
+      <main className="grid min-h-screen place-items-center bg-[#f3f4f6] text-xs text-[#61726a]">
         Loading secure workspace
       </main>
     )
 
-  const permittedNav =
-    profile?.role === "admin"
-      ? nav
-      : [
-          "Dashboard",
-          "Events",
-          "Criteria",
-          "Scores",
-          "Tabulation",
-          "Rankings",
-          "Winners",
-          "Results",
-        ]
+  const permittedNav = navigationForRole(profile?.role ?? "")
 
   return (
-    <main className="workspace min-h-screen bg-[#f1efe6] text-[#17251d]">
+    <main className="workspace min-h-screen bg-[#f3f4f6] text-[#17251d]">
       <SetupNotice />
-      <header className="border-b border-[#17251d]/20 bg-[#f8f6ee]">
-        <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-4 px-5 py-4 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
-          <div className="min-w-0 justify-self-center lg:col-start-2">
+      <header className="border-b border-[#17251d]/20 bg-[#ffffff]">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-center px-5 py-4 lg:px-8">
+          <div className="min-w-0">
             <Brand />
-          </div>
-          <div className="flex items-center justify-self-end gap-4">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold">
-                {profile?.full_name ?? "Account"}
-              </p>
-              <p className="text-xs  text-[#61726a]">
-                {profile?.role ?? "Access pending"}
-              </p>
-            </div>
-            <button
-              onClick={logout}
-              className="border border-[#17251d]/30 px-3 py-2 text-xs font-bold hover:bg-[#e8edf2]"
-            >
-              Log out
-            </button>
           </div>
         </div>
       </header>
       <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[192px_minmax(0,1fr)]">
-        <aside className="border-b border-[#17251d]/20 px-4 py-4 lg:min-h-[calc(100vh-73px)] lg:border-r lg:border-b-0 lg:px-4">
+        <aside className="flex min-w-0 flex-col border-b border-[#17251d]/20 px-4 py-4 lg:min-h-[calc(100vh-73px)] lg:border-r lg:border-b-0 lg:px-4">
           <p className="mb-3 text-xs font-bold  text-[#61726a]">
-            System navigation
+
           </p>
           <nav className="flex gap-1 overflow-x-auto lg:block lg:space-y-0.5">
             {permittedNav.map((item) => (
@@ -491,6 +449,13 @@ function Application() {
               </NavLink>
             ))}
           </nav>
+          <div className="mt-6 border-t border-[#17251d]/20 pt-4 lg:mt-auto lg:pt-5">
+            <p className="break-words text-sm font-semibold">{profile?.full_name ?? "Account"}</p>
+            <p className="mt-1 text-xs text-[#61726a]">{profile?.role ?? "Access pending"}</p>
+            <button type="button" onClick={logout} className="mt-3 min-h-11 w-full border border-[#17251d]/30 px-3 py-2 text-left text-xs font-bold hover:bg-[#e8edf2]">
+              Log out
+            </button>
+          </div>
         </aside>
         <section className="min-w-0 px-5 py-8 lg:px-7 lg:py-7">
           <Outlet context={{ profile }} />
@@ -502,23 +467,18 @@ function Application() {
 
 function DataPage() {
   const { profile } = useOutletContext<ProfileContext>()
-  const navigate = useNavigate()
   const path =
     location.pathname.split("/").pop()?.replace(/-/g, " ") ?? "dashboard"
   const title = path.replace(/\b\w/g, (letter: string) => letter.toUpperCase())
   const isAdmin = profile?.role === "admin"
 
+  if (!canAccessPage(profile?.role ?? "", path.replace(/ /g, "-"))) {
+    return <Navigate to="/app/dashboard" replace />
+  }
+
   if (title === "Dashboard") return <Dashboard />
-  if (title === "Competitions")
-    return <CompetitionsManager isAdmin={isAdmin} profileId={profile?.id} />
-  if (title === "Events")
-    return (
-      <EventsManager
-        isAdmin={isAdmin}
-        profileId={profile?.id}
-        onNavigate={(p) => navigate(`/app/${p}`)}
-      />
-    )
+  if (title === "Competition")
+    return <CompetitionPage isAdmin={isAdmin} profileId={profile?.id} />
   if (title === "Contestants") return <ContestantsManager isAdmin={isAdmin} />
   if (title === "Judges")
     return <JudgesManager isAdmin={isAdmin} isAssignMode={false} />
@@ -538,48 +498,6 @@ function DataPage() {
     return <ResultsManager isAdmin={isAdmin} viewMode="results" />
   if (title === "Audit Logs") return <AuditLogsManager />
 
-  if (title === "Settings") {
-    return (
-      <div className="max-w-xl">
-        <h1 className="font-sans text-[28px] font-semibold leading-9 tracking-[-.02em]">
-          Account Settings
-        </h1>
-        <div className="mt-6 border border-[#17251d]/20 bg-[#f8f6ee] p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-mono font-semibold text-[#61726a]">
-              Full Name
-            </label>
-            <p className="text-base font-semibold">{profile?.full_name}</p>
-          </div>
-          <div>
-            <label className="block text-xs font-mono font-semibold text-[#61726a]">
-              Role
-            </label>
-            <p className="text-sm capitalize font-mono text-[#2a3441] font-bold">
-              {profile?.role}
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs font-mono font-semibold text-[#61726a]">
-              Username
-            </label>
-            <p className="text-sm font-mono">
-              {authEmailToUsername(profile?.email) || "Authenticated"}
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs font-mono font-semibold text-[#61726a]">
-              Status
-            </label>
-            <span className="inline-block rounded bg-[#dfe5ec] px-2 py-0.5 text-xs font-semibold text-[#2a3441]">
-              {profile?.status}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
@@ -597,16 +515,31 @@ function DataPage() {
   )
 }
 
+function CompetitionPage({ isAdmin, profileId }: { isAdmin: boolean; profileId?: string }) {
+  const navigate = useNavigate()
+
+  return (
+    <div>
+      <h1 className="text-[28px] font-semibold leading-9 tracking-[-.02em]">Competition</h1>
+      <p className="mt-2 text-sm leading-6 text-[#61726a]">
+        {isAdmin ? "Manage competitions and participation in one place." : "View the competitions assigned to you."}
+      </p>
+      <div className="mt-7">
+        <EventsManager isAdmin={isAdmin} profileId={profileId} onNavigate={(page) => navigate(`/app/${page}`)} />
+      </div>
+    </div>
+  )
+}
+
 function Dashboard() {
   const specs = [
-    ["Total Competitions", "competitions"],
-    ["Active Competitions", "competitions"],
-    ["Total Events", "events"],
+    ["Total Competitions", "events"],
+    ["Active Competitions", "events"],
     ["Total Contestants", "contestants"],
     ["Registered Judges", "profiles"],
-    ["Completed Events", "events"],
-    ["Events Awaiting Scores", "events"],
-    ["Finalized Events", "events"],
+    ["Completed Competitions", "events"],
+    ["Competitions Awaiting Scores", "events"],
+    ["Finalized Competitions", "events"],
   ] as const
   const [counts, setCounts] = useState<Record<string, number | null>>({})
 
@@ -622,11 +555,11 @@ function Dashboard() {
           query = query.eq("status", "ongoing")
         if (label === "Registered Judges")
           query = query.eq("role", "judge").eq("status", "active")
-        if (label === "Completed Events")
+        if (label === "Completed Competitions")
           query = query.eq("status", "finalized")
-        if (label === "Events Awaiting Scores")
+        if (label === "Competitions Awaiting Scores")
           query = query.eq("status", "scoring")
-        if (label === "Finalized Events")
+        if (label === "Finalized Competitions")
           query = query.eq("status", "finalized")
         const { count } = await query
         return [label, count] as const
@@ -642,13 +575,13 @@ function Dashboard() {
         Control room
       </h1>
       <p className="mt-3 max-w-xl text-sm leading-6 text-[#61726a]">
-        Competition and event activity at a glance.
+        Competition activity at a glance.
       </p>
       <div className="mt-9 grid border-l border-t border-[#17251d]/20 sm:grid-cols-2 xl:grid-cols-4">
         {specs.map(([label]) => (
           <div
             key={label}
-            className="min-h-24 border-r border-b border-[#17251d]/20 bg-[#f8f6ee] p-4"
+            className="min-h-24 border-r border-b border-[#17251d]/20 bg-[#ffffff] p-4"
           >
             <p className="text-xs font-bold  text-[#61726a]">{label}</p>
             <p className="mt-3 font-mono text-2xl">{counts[label] ?? "—"}</p>
@@ -665,7 +598,7 @@ function Dashboard() {
 }
 
 export const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/results" replace /> },
+  { path: "/", element: <Navigate to="/app/dashboard" replace /> },
   { path: "/login", Component: Login },
   { path: "/register", Component: Register },
   { path: "/results", element: <PublicResults brand={<Brand />} /> },
@@ -673,9 +606,12 @@ export const router = createBrowserRouter([
     path: "/app",
     Component: Application,
     children: [
-      { index: true, Component: DataPage },
+      { index: true, element: <Navigate to="/app/dashboard" replace /> },
+      { path: "settings", element: <Navigate to="/app/dashboard" replace /> },
+      { path: "events", element: <Navigate to="/app/competition" replace /> },
+      { path: "competitions", element: <Navigate to="/app/competition" replace /> },
       { path: ":page", Component: DataPage },
     ],
   },
-  { path: "*", element: <Navigate to="/results" replace /> },
+  { path: "*", element: <Navigate to="/app/dashboard" replace /> },
 ])

@@ -1,131 +1,165 @@
-import { FormEvent, useEffect, useState } from "react";
-import { authEmailToUsername, supabase } from "../lib/supabase";
+import { FormEvent, useEffect, useState } from "react"
+import { authEmailToUsername, supabase } from "../lib/supabase"
 
 type Profile = {
   id: string;
   full_name: string;
   email: string;
-  judge_id: string | null;
-  contact_number: string | null;
+  judge_id: string | null
+  contact_number: string | null
   role: string;
-  status: string;
-};
+  status: string
+}
 
-type EventItem = { id: string; name: string };
+type EventItem = { id: string; name: string }
 type Assignment = {
   id: string;
   judge_id: string;
   event_id: string;
-  profiles?: { full_name: string; email: string };
-  events?: { name: string };
-};
+  profiles?: { full_name: string; email: string }
+  events?: { name: string }
+}
 
-export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: boolean; isAssignMode?: boolean }) {
-  const [judges, setJudges] = useState<Profile[]>([]);
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [selectedJudgeId, setSelectedJudgeId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+export default function JudgesManager({
+  isAdmin,
+  isAssignMode,
+}: {
+  isAdmin: boolean
+  isAssignMode?: boolean
+}) {
+  const [judges, setJudges] = useState<Profile[]>([])
+  const [events, setEvents] = useState<EventItem[]>([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [selectedEventId, setSelectedEventId] = useState("")
+  const [selectedJudgeId, setSelectedJudgeId] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   async function loadData() {
-    if (!supabase) return;
-    setLoading(true);
+    if (!supabase) return
+    setLoading(true)
     // Load judges
     const { data: jData } = await supabase
       .from("profiles")
       .select("id, full_name, email, judge_id, contact_number, role, status")
-      .order("full_name");
-    if (jData) setJudges(jData);
+      .order("full_name")
+    if (jData) setJudges(jData)
 
     // Load events
-    const { data: evData } = await supabase.from("events").select("id, name").order("name");
+    const { data: evData } = await supabase
+      .from("events")
+      .select("id, name")
+      .order("name")
     if (evData) {
-      setEvents(evData);
-      if (!selectedEventId && evData.length > 0) setSelectedEventId(evData[0].id);
+      setEvents(evData)
+      if (!selectedEventId && evData.length > 0)
+        setSelectedEventId(evData[0].id)
     }
 
     // Load assignments
     const { data: aData } = await supabase
       .from("judge_event_assignments")
-      .select("id, judge_id, event_id, profiles(full_name, email), events(name)")
-      .order("assigned_at", { ascending: false });
-    if (aData) setAssignments(aData as unknown as Assignment[]);
+      .select(
+        "id, judge_id, event_id, profiles(full_name, email), events(name)",
+      )
+      .order("assigned_at", { ascending: false })
+    if (aData) setAssignments(aData as unknown as Assignment[])
 
-    setLoading(false);
+    setLoading(false)
   }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   async function handleStatusChange(profileId: string, newStatus: string) {
-    if (!supabase || !isAdmin) return;
-    setError("");
-    const { error: err } = await supabase.from("profiles").update({ status: newStatus }).eq("id", profileId);
-    if (err) setError(err.message);
-    else loadData();
+    if (!supabase || !isAdmin) return
+    setError("")
+    const { error: err } = await supabase
+      .from("profiles")
+      .update({ status: newStatus })
+      .eq("id", profileId)
+    if (err) setError(err.message)
+    else loadData()
   }
 
   async function handleAssign(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+    e.preventDefault()
+    setError("")
+    setSuccess("")
     if (!supabase || !isAdmin || !selectedEventId || !selectedJudgeId) {
-      setError("Select both an event and an active judge.");
-      return;
+      setError("Select both an event and an active judge.")
+      return
     }
 
-    const { error: insErr } = await supabase.from("judge_event_assignments").insert({
-      judge_id: selectedJudgeId,
-      event_id: selectedEventId,
-      status: "active",
-    });
+    const { error: insErr } = await supabase
+      .from("judge_event_assignments")
+      .insert({
+        judge_id: selectedJudgeId,
+        event_id: selectedEventId,
+        status: "active",
+      })
 
     if (insErr) {
-      setError(insErr.message);
+      setError(insErr.message)
     } else {
-      setSuccess("Judge successfully assigned to event.");
-      loadData();
+      setSuccess("Judge successfully assigned to event.")
+      loadData()
     }
   }
 
   async function handleUnassign(assignmentId: string) {
-    if (!supabase || !isAdmin) return;
-    setError("");
-    const { error: delErr } = await supabase.from("judge_event_assignments").delete().eq("id", assignmentId);
-    if (delErr) setError(delErr.message);
-    else loadData();
+    if (!supabase || !isAdmin) return
+    setError("")
+    const { error: delErr } = await supabase
+      .from("judge_event_assignments")
+      .delete()
+      .eq("id", assignmentId)
+    if (delErr) setError(delErr.message)
+    else loadData()
   }
 
-  const activeJudges = judges.filter((j) => j.status === "active" && j.role === "judge");
+  const activeJudges = judges.filter(
+    (j) => j.status === "active" && j.role === "judge",
+  )
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#17251d]/20 pb-5">
         <div>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[.15em] text-[#61726a]">
-            {isAssignMode ? "Official Panel" : "Faculty & Guest Judges"}
-          </p>
-          <h1 className="mt-2 font-display text-4xl tracking-[-.04em]">
+          <h1 className="font-sans text-[28px] font-semibold leading-9 tracking-[-.02em]">
             {isAssignMode ? "Assign Judges to Events" : "Judge Directory"}
           </h1>
         </div>
       </div>
 
-      {error && <p className="mt-3 border-l-2 border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">{error}</p>}
-      {success && <p className="mt-3 border-l-2 border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">{success}</p>}
+      {error && (
+        <p className="mt-3 border-l border-[#a23b30] bg-[#f3e2dc] p-2 text-xs text-[#70271f]">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="mt-3 border-l border-[#2a3441] bg-[#dfe5ec] p-2 text-xs text-[#2a3441]">
+          {success}
+        </p>
+      )}
 
       {isAssignMode ? (
         <div className="mt-6 space-y-6">
           {isAdmin && (
             <div className="border border-[#17251d]/20 bg-[#f8f6ee] p-5">
-              <h2 className="font-display text-lg font-bold">Assign Judge to Competition Event</h2>
-              <form onSubmit={handleAssign} className="mt-4 grid gap-4 sm:grid-cols-3">
+              <h2 className="font-sans text-lg font-bold">
+                Assign Judge to Competition Event
+              </h2>
+              <form
+                onSubmit={handleAssign}
+                className="mt-4 grid max-w-lg gap-4"
+              >
                 <div>
-                  <label className="block text-xs font-semibold">Select Event</label>
+                  <label className="block text-xs font-semibold">
+                    Select Event
+                  </label>
                   <select
                     value={selectedEventId}
                     onChange={(e) => setSelectedEventId(e.target.value)}
@@ -139,7 +173,9 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold">Select Active Judge</label>
+                  <label className="block text-xs font-semibold">
+                    Select Active Judge
+                  </label>
                   <select
                     value={selectedJudgeId}
                     onChange={(e) => setSelectedJudgeId(e.target.value)}
@@ -148,7 +184,8 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                     <option value="">-- Choose Judge --</option>
                     {activeJudges.map((j) => (
                       <option key={j.id} value={j.id}>
-                        {j.full_name} (@{authEmailToUsername(j.email)}) {j.judge_id ? `[${j.judge_id}]` : ""}
+                        {j.full_name} (@{authEmailToUsername(j.email)}){" "}
+                        {j.judge_id ? `[${j.judge_id}]` : ""}
                       </option>
                     ))}
                   </select>
@@ -167,7 +204,7 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
 
           <div className="overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+              <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
                 <tr>
                   <th className="p-3">Event</th>
                   <th className="p-3">Assigned Judge</th>
@@ -180,7 +217,9 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                   <tr key={a.id} className="hover:bg-white/50">
                     <td className="p-3 font-semibold">{a.events?.name}</td>
                     <td className="p-3">{a.profiles?.full_name}</td>
-                    <td className="p-3 font-mono text-xs text-[#61726a]">@{authEmailToUsername(a.profiles?.email)}</td>
+                    <td className="p-3 font-mono text-xs text-[#61726a]">
+                      @{authEmailToUsername(a.profiles?.email)}
+                    </td>
                     {isAdmin && (
                       <td className="p-3 text-right">
                         <button
@@ -195,7 +234,10 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                 ))}
                 {assignments.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-6 text-center text-xs text-[#61726a]">
+                    <td
+                      colSpan={4}
+                      className="p-6 text-center text-xs text-[#61726a]"
+                    >
                       No judge assignments registered yet.
                     </td>
                   </tr>
@@ -207,7 +249,7 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
       ) : (
         <div className="mt-6 overflow-x-auto border border-[#17251d]/20 bg-[#f8f6ee]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] font-mono text-[10px] font-bold uppercase tracking-wider text-[#61726a]">
+            <thead className="border-b border-[#17251d]/20 bg-[#e8edf2] text-xs font-bold  text-[#61726a]">
               <tr>
                 <th className="p-3">Judge Name</th>
                 <th className="p-3">Judge ID</th>
@@ -222,16 +264,18 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                 <tr key={j.id} className="hover:bg-white/50">
                   <td className="p-3 font-semibold">{j.full_name}</td>
                   <td className="p-3 font-mono text-xs">{j.judge_id || "—"}</td>
-                  <td className="p-3 font-mono text-xs">@{authEmailToUsername(j.email)}</td>
+                  <td className="p-3 font-mono text-xs">
+                    @{authEmailToUsername(j.email)}
+                  </td>
                   <td className="p-3 font-mono text-xs capitalize">{j.role}</td>
                   <td className="p-3">
                     <span
-                      className={`inline-block rounded-sm px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${
+                      className={`inline-block rounded-sm px-2 py-0.5 text-xs font-bold  ${
                         j.status === "active"
                           ? "bg-[#dfe5ec] text-[#2a3441]"
                           : j.status === "pending"
-                          ? "bg-[#fff3cf] text-[#a97b26]"
-                          : "bg-[#f3e2dc] text-[#a23b30]"
+                            ? "bg-[#fff3cf] text-[#a97b26]"
+                            : "bg-[#f3e2dc] text-[#a23b30]"
                       }`}
                     >
                       {j.status}
@@ -241,7 +285,9 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
                     <td className="p-3 text-right">
                       <select
                         value={j.status}
-                        onChange={(e) => handleStatusChange(j.id, e.target.value)}
+                        onChange={(e) =>
+                          handleStatusChange(j.id, e.target.value)
+                        }
                         className="border border-[#17251d]/30 bg-white px-2 py-1 text-xs"
                       >
                         <option value="pending">Pending</option>
@@ -254,7 +300,10 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
               ))}
               {judges.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-xs text-[#61726a]">
+                  <td
+                    colSpan={6}
+                    className="p-6 text-center text-xs text-[#61726a]"
+                  >
                     No accounts found in directory.
                   </td>
                 </tr>
@@ -264,5 +313,5 @@ export default function JudgesManager({ isAdmin, isAssignMode }: { isAdmin: bool
         </div>
       )}
     </div>
-  );
+  )
 }

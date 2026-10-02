@@ -11,6 +11,31 @@ html, body, #root { min-height: 100%; }
 
 body { font-family: var(--font-sans); }
 
-button, input { font: inherit; }
+@layer base {
+  button, input, select, textarea { font-family: inherit; }
+  button:not(:disabled), summary { cursor: pointer; }
+  :focus-visible { outline: 2px solid #2a3441; outline-offset: 3px; }
+  ::selection { background: #dfe5ec; color: #17251d; }
+}
 input[type="number"] { appearance: textfield; }
 input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { appearance: none; }
+
+.public-results ::selection { background: #dfe5ec; color: #17251d; }
+.public-results input { caret-color: #2a3441; }
+.public-results header p + p { font-family: var(--font-sans); font-size: 12px; letter-spacing: .02em; text-transform: none; }
+
+.auth-page, .workspace { background-color: #f5f6f4; }
+.auth-page button[type="submit"], .auth-page form > button { min-height: 44px; border-radius: 6px; margin-top: 20px; }
+.auth-page form > button:hover:not(:disabled) { background-color: #2a3441; }
+.auth-page form > p[role="alert"] { border-left-width: 1px; font-size: 14px; }
+.workspace :is(input, select, textarea) { border-radius: 4px; }
+.workspace :is(input, select, textarea):focus-visible { outline: 2px solid #2a3441; outline-offset: 2px; }
+.workspace button { border-radius: 4px; }
+.workspace thead { font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; text-transform: none; }
+.workspace table :is(td, th) { padding-top: 10px; padding-bottom: 10px; }
+.workspace nav a { border-radius: 0 4px 4px 0; }
+.workspace :is(input, textarea) { caret-color: #2a3441; }
+.workspace [class*="overflow-x-auto"] { scrollbar-width: thin; scrollbar-color: #8d9990 #f5f6f4; }
+@media (max-width: 639px) {
+  .workspace header > div { flex-wrap: wrap; gap: 12px; }
+}

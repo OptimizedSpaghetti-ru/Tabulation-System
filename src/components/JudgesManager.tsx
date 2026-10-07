@@ -50,6 +50,61 @@ export default function JudgesManager({
   const [showPassword, setShowPassword] = useState(false)
   const [creatingJudge, setCreatingJudge] = useState(false)
   const [createError, setCreateError] = useState("")
+  const [passwordJudge, setPasswordJudge] = useState<Profile | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState("")
+
+  function closePasswordForm() {
+    setPasswordJudge(null)
+    setNewPassword("")
+    setConfirmPassword("")
+    setShowNewPassword(false)
+    setPasswordError("")
+    document.getElementById(`change-password-${passwordJudge?.id}`)?.focus()
+  }
+
+  async function handleChangePassword(e: FormEvent) {
+    e.preventDefault()
+    if (changingPassword || !isAdmin || !passwordJudge) return
+    setPasswordError("")
+    setSuccess("")
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(newPassword)) {
+      setPasswordError("Password needs 8+ characters with uppercase, lowercase, number, and special character.")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords do not match. Re-enter the confirmation.")
+      return
+    }
+    if (!supabase) {
+      setPasswordError("Password changes are unavailable. Please try again later.")
+      return
+    }
+    setChangingPassword(true)
+    try {
+      const { data, error: functionError } = await supabase.functions.invoke("change-judge-password", {
+        body: { judgeId: passwordJudge.id, password: newPassword },
+      })
+      if (functionError) {
+        let message = "Could not change the password. Please try again."
+        if (functionError.context instanceof Response) {
+          const details = await functionError.context.json().catch(() => null)
+          if (typeof details?.error === "string") message = details.error
+        }
+        throw new Error(message)
+      }
+      if (data?.judgeId !== passwordJudge.id) throw new Error("Could not confirm the password change. Please try again.")
+      setSuccess(`Password changed for @${authEmailToUsername(passwordJudge.email)}. Share the new password with the judge.`)
+      closePasswordForm()
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Could not change the password. Please try again.")
+    } finally {
+      setChangingPassword(false)
+    }
+  }
 
   async function handleAddJudge(e: FormEvent) {
     e.preventDefault()
@@ -218,13 +273,14 @@ export default function JudgesManager({
           <button
             type="button"
             onClick={() => {
+              closePasswordForm()
               setShowAddJudge(true)
               setCreateError("")
               setSuccess("")
             }}
             aria-expanded={showAddJudge}
             aria-controls="add-judge-form"
-            disabled={showAddJudge}
+            disabled={showAddJudge || changingPassword}
             className="bg-[#2a3441] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#394658] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:opacity-50"
           >
             Add Judge
@@ -356,6 +412,32 @@ export default function JudgesManager({
       )}
       </AnimatedPresence>
 
+      {isAdmin && !isAssignMode && passwordJudge && (
+        <section id="change-judge-password-form" aria-labelledby="change-password-heading" className="mt-6 border border-[#17251d]/20 bg-white p-5">
+          <h2 id="change-password-heading" className="text-lg font-semibold">Change Password</h2>
+          <p className="mt-1 break-words text-sm text-[#61726a]">Set a new sign-in password for {passwordJudge.full_name} (@{authEmailToUsername(passwordJudge.email)}).</p>
+          <form onSubmit={handleChangePassword} aria-busy={changingPassword} className="mt-4 grid max-w-lg gap-4">
+            <div>
+              <label htmlFor="judge-new-password" className="block text-sm font-semibold">New password</label>
+              <div className="mt-1 flex border border-[#17251d]/30 bg-white focus-within:outline-2 focus-within:outline-[#2a3441]">
+                <input id="judge-new-password" autoFocus type={showNewPassword ? "text" : "password"} required minLength={8} autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={changingPassword} aria-describedby="new-password-help" className="min-w-0 flex-1 bg-transparent p-2 text-sm outline-none disabled:opacity-50" />
+                <button type="button" disabled={changingPassword} aria-pressed={showNewPassword} aria-label={showNewPassword ? "Hide passwords" : "Show passwords"} onClick={() => setShowNewPassword(!showNewPassword)} className="px-3 text-xs font-semibold text-[#2a3441] hover:bg-[#e8edf2] focus-visible:outline-2 focus-visible:outline-[#2a3441]">{showNewPassword ? "Hide" : "Show"}</button>
+              </div>
+              <p id="new-password-help" className="mt-1 text-xs text-[#61726a]">8+ characters with uppercase, lowercase, number, and special character.</p>
+            </div>
+            <div>
+              <label htmlFor="judge-confirm-password" className="block text-sm font-semibold">Confirm new password</label>
+              <input id="judge-confirm-password" type={showNewPassword ? "text" : "password"} required minLength={8} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={changingPassword} className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-[#2a3441] disabled:opacity-50" />
+            </div>
+            {passwordError && <p role="alert" className="bg-[#f3e2dc] p-3 text-sm text-[#70271f]">{passwordError}</p>}
+            <div className="flex flex-wrap gap-3">
+              <button type="submit" disabled={changingPassword} className="bg-[#2a3441] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#394658] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:opacity-50">{changingPassword ? "Saving password..." : "Save Password"}</button>
+              <button type="button" disabled={changingPassword} onClick={closePasswordForm} className="border border-[#17251d]/30 px-4 py-2.5 text-sm font-semibold hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:opacity-50">Cancel</button>
+            </div>
+          </form>
+        </section>
+      )}
+
       {error && (
         <p
           role="alert"
@@ -481,7 +563,7 @@ export default function JudgesManager({
                 <th className="p-3">Username</th>
                 <th className="p-3">Role</th>
                 <th className="p-3">Status</th>
-                {isAdmin && <th className="p-3 text-right">Status Action</th>}
+                {isAdmin && <th className="p-3 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#17251d]/10">
@@ -507,7 +589,18 @@ export default function JudgesManager({
                   </td>
                   {isAdmin && (
                     <td className="p-3 text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button type="button" id={`change-password-${j.id}`} disabled={changingPassword} aria-expanded={passwordJudge?.id === j.id} aria-controls="change-judge-password-form" onClick={() => {
+                        closePasswordForm()
+                        setPasswordJudge(j)
+                        setShowAddJudge(false)
+                        setPassword("")
+                        setShowPassword(false)
+                        setSuccess("")
+                        setError("")
+                      }} className="border border-[#17251d]/30 px-3 py-1.5 text-xs font-semibold text-[#2a3441] hover:bg-[#e8edf2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:opacity-50">Change Password</button>
                       <select
+                        aria-label={`Status for ${j.full_name}`}
                         value={j.status}
                         onChange={(e) =>
                           handleStatusChange(j.id, e.target.value)
@@ -518,6 +611,7 @@ export default function JudgesManager({
                         <option value="active">Active (Approved)</option>
                         <option value="suspended">Suspended</option>
                       </select>
+                      </div>
                     </td>
                   )}
                 </tr>

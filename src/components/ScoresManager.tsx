@@ -1,10 +1,12 @@
 import { criteriaReadyForScoring } from "../lib/criteria-readiness"
 import { getDefaultEventId } from "../lib/default-event"
-import { useEffect, useState, type CSSProperties } from "react"
+import { filterScoringContestants, isCcsPageant, isContestantGender, type ContestantGender } from "../lib/pageant-contestants"
+import { useEffect, useState } from "react"
 
 import { supabase } from "../lib/supabase"
 
 import ContestantPhoto from "./ContestantPhoto"
+import ScoreSlider from "./ScoreSlider"
 
 type EventItem = { id: string; name: string; status: string }
 
@@ -23,6 +25,7 @@ type Contestant = {
   contestant_number: string
   full_name: string
   photo_path: string | null
+  gender: string | null
 }
 
 export default function ScoresManager({
@@ -43,6 +46,7 @@ export default function ScoresManager({
   const [contestants, setContestants] = useState<Contestant[]>([])
 
   const [activeContestantIndex, setActiveContestantIndex] = useState(0)
+  const [selectedGender, setSelectedGender] = useState<ContestantGender>("Male")
 
   const [scores, setScores] = useState<Record<string, Record<string, number>>>(
     {},
@@ -126,7 +130,7 @@ export default function ScoresManager({
       .from("event_contestants")
 
       .select(
-        "contestant_id, contestants(id, contestant_number, full_name, photo_path)",
+        "contestant_id, contestants(id, contestant_number, gender, full_name, photo_path)",
       )
 
       .eq("event_id", eventId)
@@ -136,6 +140,7 @@ export default function ScoresManager({
 
     setContestants(contList)
     setActiveContestantIndex(0)
+    setSelectedGender("Male")
 
     // Load judge score sheet status
 
@@ -234,6 +239,10 @@ export default function ScoresManager({
   }
 
   const criteriaReady = criteriaReadyForScoring(criteria)
+  const eventName = events.find(event => event.id === selectedEventId)?.name ?? ""
+  const showGenderSwitcher = !isAdmin && isCcsPageant(eventName)
+  const visibleContestants = isAdmin ? contestants : filterScoringContestants(contestants, eventName, selectedGender)
+  const missingGenderCount = showGenderSwitcher ? contestants.filter(c => !isContestantGender(c.gender)).length : 0
 
   async function handleSaveDraft() {
     if (!supabase || !profileId || !selectedEventId) return
@@ -417,8 +426,22 @@ export default function ScoresManager({
         </div>
       </div>
 
+      {showGenderSwitcher && (
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <div role="group" aria-label="Contestant gender filter" className="inline-flex border border-[#17251d]/30">
+            {([['Male', 'Mr'], ['Female', 'Ms']] as const).map(([gender, label]) => (
+              <button key={gender} type="button" aria-pressed={selectedGender === gender} disabled={loading} onClick={() => {
+                setSelectedGender(gender)
+                setActiveContestantIndex(0)
+              }} className={`min-w-16 px-4 py-2 text-sm font-semibold focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:opacity-50 ${selectedGender === gender ? "bg-[#2a3441] text-white" : "bg-white text-[#2a3441] hover:bg-[#e8edf2]"}`}>{label}</button>
+            ))}
+          </div>
+          {missingGenderCount > 0 && <p role="status" className="text-sm text-[#70271f]">{missingGenderCount} contestant(s) need gender assigned by an administrator before they appear under Mr or Ms.</p>}
+        </div>
+      )}
+
       {loading ? (
-        <p className="mt-8 text-xs text-[#61726a]">Loading score sheet…</p>
+        <p className="mt-8 text-xs text-[#61726a]">Loading score sheetâ€¦</p>
       ) : !criteriaReady ? (
         <div className="mt-8 border-l border-[#a23b30] bg-[#f3e2dc] p-6">
           <h2 className="font-sans text-lg font-semibold">
@@ -446,7 +469,8 @@ export default function ScoresManager({
             <p>{contestants.filter((c) => criteria.every((crit) => scores[c.id]?.[crit.id] !== undefined)).length} of {contestants.length} contestants fully scored</p>
             <p className="text-xs">Changes are saved when you select Save Draft.</p>
           </div>
-          {!isAdmin && (
+          {visibleContestants.length === 0 && <p role="status" className="border border-[#17251d]/20 bg-white p-5 text-sm text-[#52655c]">No {selectedGender.toLowerCase()} contestants are registered for this competition.</p>}
+          {!isAdmin && visibleContestants.length > 0 && (
             <nav aria-label="Contestant navigation" className="flex items-center justify-between gap-3">
               <button
                 type="button"
@@ -458,20 +482,20 @@ export default function ScoresManager({
                 <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
               </button>
               <p aria-live="polite" aria-atomic="true" className="text-center text-sm font-semibold text-[#2a3441]">
-                Contestant {activeContestantIndex + 1} of {contestants.length}
+                Contestant {activeContestantIndex + 1} of {visibleContestants.length}
               </p>
               <button
                 type="button"
                 aria-label="Next contestant"
-                disabled={activeContestantIndex >= contestants.length - 1}
-                onClick={() => setActiveContestantIndex((index) => Math.min(contestants.length - 1, index + 1))}
+                disabled={activeContestantIndex >= visibleContestants.length - 1}
+                onClick={() => setActiveContestantIndex((index) => Math.min(visibleContestants.length - 1, index + 1))}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#17251d]/30 bg-white text-[#2a3441] hover:bg-[#e8edf2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:cursor-default disabled:opacity-40"
               >
                 <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
               </button>
             </nav>
           )}
-          {(isAdmin ? contestants : contestants.slice(activeContestantIndex, activeContestantIndex + 1)).map((c) => {
+          {(isAdmin ? visibleContestants : visibleContestants.slice(activeContestantIndex, activeContestantIndex + 1)).map((c) => {
             const completed = criteria.filter((crit) => scores[c.id]?.[crit.id] !== undefined).length
             const total = criteria.reduce((sum, crit) => sum + (scores[c.id]?.[crit.id] ?? 0) * Number(crit.weight_percentage) / 100, 0)
             return (
@@ -515,14 +539,14 @@ export default function ScoresManager({
                             <span className="text-xs text-[#52655c]">/ {maximum}</span>
                           </div>
                         </div>
-                        <input type="range" min="0" max={sliderMaximum} step="5"
+                        <ScoreSlider min="0" max={sliderMaximum} step="5"
                           value={Math.min(sliderMaximum, Math.round((raw ?? 0) / 5) * 5)}
                           disabled={disabled || sliderMaximum === 0}
                           aria-label={`${crit.name} score for ${c.full_name}, in steps of 5`}
                           aria-describedby={`${inputId}-help`}
                           onChange={(e) => handleScoreChange(c.id, crit.id, e.target.value, maximum)}
                           className={`score-slider ${raw === undefined ? "score-slider-empty" : ""}`}
-                          style={{ "--score-fill": `${sliderMaximum > 0 ? Math.min(100, Math.round((raw ?? 0) / 5) * 5 / sliderMaximum * 100) : 0}%` } as CSSProperties} />
+                          fill={sliderMaximum > 0 ? Math.min(100, Math.round((raw ?? 0) / 5) * 5 / sliderMaximum * 100) : 0} />
                         <div aria-hidden="true" className="score-ticks">
                           {Array.from({ length: Math.min(40, Math.floor(sliderMaximum / 5)) + 1 }, (_, tick) => <span key={tick} />)}
                         </div>

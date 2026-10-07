@@ -45,6 +45,7 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .judge-scoring .score-number { border-radius: 6px; font-variant-numeric: tabular-nums; }
 .judge-scoring .score-number:focus { border-color: #2a3441; }
 .judge-scoring .score-slider {
+  --score-scale: 1;
   display: block;
   width: 100%;
   height: 36px;
@@ -74,7 +75,8 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
   border-radius: 5px;
   background: linear-gradient(to right, #fff 8px, #2a3441 8px, #2a3441 10px, #fff 10px);
   box-shadow: 0 2px 4px rgb(23 37 29 / 15%);
-  transition: box-shadow 150ms ease-out;
+  transition: scale 150ms ease-out;
+  scale: var(--score-scale);
 }
 .score-slider::-moz-range-thumb {
   width: 18px;
@@ -83,12 +85,18 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
   border-radius: 5px;
   background: linear-gradient(to right, #fff 8px, #2a3441 8px, #2a3441 10px, #fff 10px);
   box-shadow: 0 2px 4px rgb(23 37 29 / 15%);
+  scale: var(--score-scale);
+  transition: scale 150ms ease-out;
 }
-.score-slider:hover:not(:disabled)::-webkit-slider-thumb { box-shadow: 0 3px 7px rgb(23 37 29 / 25%); }
+@media (hover: hover) and (pointer: fine) {
+  .score-slider:hover:not(:disabled) { --score-scale: 1.05; }
+}
+.judge-scoring .score-slider[data-active="true"] { --score-scale: 1.25; }
 .judge-scoring .score-slider:disabled { cursor: default; opacity: .5; }
 .score-slider-empty::-webkit-slider-thumb { border-color: #61726a; }
 @media (prefers-reduced-motion: reduce) {
-  .score-slider::-webkit-slider-thumb { transition: none; }
+  .score-slider::-webkit-slider-thumb { transition: none; scale: 1; }
+  .score-slider::-moz-range-thumb { transition: none; scale: 1; }
 }
 .score-ticks { display: flex; justify-content: space-between; margin: -4px 10px 5px; }
 .score-ticks span { width: 1px; height: 4px; background: #9ba9a1; }

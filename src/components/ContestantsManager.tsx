@@ -1,5 +1,6 @@
 import AnimatedPresence from "./AnimatedPresence"
 import { getDefaultEventId } from "../lib/default-event"
+import { isCcsPageant, pageantContestantError } from "../lib/pageant-contestants"
 import { FormEvent, useEffect, useState } from "react"
 
 import { supabase } from "../lib/supabase"
@@ -15,6 +16,7 @@ type Contestant = {
   id: string
 
   contestant_number: string
+  gender: string | null
 
   full_name: string
 
@@ -55,12 +57,15 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
   const [photoChecking, setPhotoChecking] = useState(false)
 
   const [editingPhoto, setEditingPhoto] = useState<Contestant | null>(null)
+  const [editGender, setEditGender] = useState("")
+  const [editNumber, setEditNumber] = useState("")
 
   const [saving, setSaving] = useState(false)
 
   const [notice, setNotice] = useState("")
 
   const [form, setForm] = useState({
+    gender: "",
     contestant_number: "",
 
     full_name: "",
@@ -107,7 +112,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
       .from("contestants")
 
       .select(
-        "id, contestant_number, full_name, student_id, course, year_level, section, status, photo_path, event_contestants(event_id, events(name))",
+        "id, contestant_number, gender, full_name, student_id, course, year_level, section, status, photo_path, event_contestants(event_id, events(name))",
       )
 
       .order("contestant_number")
@@ -124,6 +129,15 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
   useEffect(() => {
     loadData()
   }, [])
+
+  const formEvent = events.find(event => event.id === form.event_id)
+  const formIsPageant = isCcsPageant(formEvent?.name ?? "")
+  const editingPageantEvent = editingPhoto?.event_contestants?.find(ec =>
+    isCcsPageant(ec.events?.name ?? events.find(event => event.id === ec.event_id)?.name ?? ""),
+  )
+  function contestantsForEvent(eventId: string) {
+    return contestants.filter(c => c.event_contestants?.some(ec => ec.event_id === eventId))
+  }
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
@@ -150,6 +164,12 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
       return
     }
 
+    const genderError = pageantContestantError(formEvent?.name ?? "", form.gender, form.contestant_number, contestantsForEvent(form.event_id))
+    if (genderError) {
+      setError(genderError)
+      return
+    }
+
     setSaving(true)
 
     setNotice("")
@@ -167,6 +187,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
         id,
 
         contestant_number: form.contestant_number.trim(),
+        ...(formIsPageant ? { gender: form.gender } : {}),
 
         full_name: form.full_name.trim(),
 
@@ -195,7 +216,9 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
         registration_status: "registered",
       })
 
-      if (ecErr) throw new Error(ecErr.message)
+      if (ecErr) throw new Error(ecErr.code === "23505" && ecErr.message.includes("event_contestants_pageant_number_gender")
+        ? "That contestant number is already assigned to another contestant of the same gender in this competition. Choose another number."
+        : ecErr.message)
     } catch (failure) {
       let message =
         failure instanceof Error
@@ -247,6 +270,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
     setShowModal(false)
 
     setForm({
+      gender: "",
       contestant_number: "",
 
       full_name: "",
@@ -271,7 +295,19 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
     if (!supabase || !editingPhoto || !isAdmin || saving || photoChecking)
       return
 
-    if (!photoFile && !photoRemoved) {
+    if (editingPageantEvent) {
+      if (!editNumber.trim()) {
+        setError("Contestant number is required.")
+        return
+      }
+      const genderError = pageantContestantError("Mr. and Ms. CCS", editGender, editNumber, contestantsForEvent(editingPageantEvent.event_id), editingPhoto.id)
+      if (genderError) {
+        setError(genderError)
+        return
+      }
+    }
+
+    if (!photoFile && !photoRemoved && !editingPageantEvent) {
       setEditingPhoto(null)
       return
     }
@@ -291,17 +327,22 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
       const { error: updateError } = await supabase
         .from("contestants")
 
-        .update({ photo_path: uploadedPath })
+        .update({
+          ...(photoFile || photoRemoved ? { photo_path: uploadedPath } : {}),
+          ...(editingPageantEvent ? { gender: editGender, contestant_number: editNumber.trim() } : {}),
+        })
         .eq("id", editingPhoto.id)
         .select("id")
         .single()
 
-      if (updateError) throw new Error(updateError.message)
+      if (updateError) throw new Error(updateError.code === "23505" && updateError.message.includes("event_contestants_pageant_number_gender")
+        ? "That contestant number is already assigned to another contestant of the same gender in this competition. Choose another number."
+        : updateError.message)
     } catch (failure) {
       let message =
         failure instanceof Error
           ? failure.message
-          : "Could not save photo. Please try again."
+          : "Could not save contestant. Please try again."
 
       if (uploadedPath) {
         try {
@@ -318,7 +359,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
       return
     }
 
-    if (editingPhoto.photo_path) {
+    if (editingPhoto.photo_path && (photoFile || photoRemoved)) {
       try {
         await deleteContestantPhoto(editingPhoto.photo_path)
       } catch {
@@ -344,6 +385,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
         c.event_contestants?.some((ec) => ec.event_id === selectedEventId),
       )
     : contestants
+  const selectedIsPageant = isCcsPageant(events.find(event => event.id === selectedEventId)?.name ?? "")
 
   return (
     <div>
@@ -359,6 +401,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
               setError("")
               setPhotoFile(null)
               setPhotoRemoved(false)
+              setForm(prev => ({ ...prev, gender: "" }))
               setShowModal(true)
             }}
             className="bg-[#2a3441] px-4 py-2 text-xs font-bold  text-white hover:bg-[#394658]"
@@ -446,7 +489,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                       required
                       value={form.event_id}
                       onChange={(e) =>
-                        setForm({ ...form, event_id: e.target.value })
+                        setForm({ ...form, event_id: e.target.value, gender: "" })
                       }
                       className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm"
                     >
@@ -457,6 +500,16 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                       ))}
                     </select>
                   </div>
+                  {formIsPageant && (
+                    <div>
+                      <label htmlFor="contestant-gender" className="block text-xs font-semibold">Gender</label>
+                      <select id="contestant-gender" required value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })} className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-[#2a3441]">
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold">
@@ -578,7 +631,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
             className="w-full max-w-lg border border-[#17251d]/30 bg-white p-6 shadow-xl"
           >
             <h2 id="photo-editor-title" className="text-lg font-semibold">
-              Update contestant photo
+              {editingPageantEvent ? "Edit contestant" : "Update contestant photo"}
             </h2>
             <p className="mt-1 text-sm text-[#61726a]">
               {editingPhoto.full_name}
@@ -592,6 +645,22 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
               </p>
             )}
             <form onSubmit={handlePhotoSave} className="mt-4 space-y-4">
+              {editingPageantEvent && (
+                <fieldset disabled={saving} className="grid gap-4">
+                  <div>
+                    <label htmlFor="edit-contestant-number" className="block text-xs font-semibold">Contestant / Team No.</label>
+                    <input id="edit-contestant-number" required value={editNumber} onChange={e => setEditNumber(e.target.value)} className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-[#2a3441]" />
+                  </div>
+                  <div>
+                    <label htmlFor="edit-contestant-gender" className="block text-xs font-semibold">Gender</label>
+                    <select id="edit-contestant-gender" required value={editGender} onChange={e => setEditGender(e.target.value)} className="mt-1 w-full border border-[#17251d]/30 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-[#2a3441]">
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                </fieldset>
+              )}
               <ContestantPhotoPicker
                 file={photoFile}
                 path={editingPhoto.photo_path}
@@ -624,11 +693,11 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                 <button
                   type="submit"
                   disabled={
-                    saving || photoChecking || (!photoFile && !photoRemoved)
+                    saving || photoChecking || (!photoFile && !photoRemoved && !editingPageantEvent)
                   }
                   className="bg-[#2a3441] px-4 py-2 text-xs font-bold text-white hover:bg-[#394658] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441] disabled:opacity-50"
                 >
-                  {saving ? "Saving?" : "Save photo"}
+                  {saving ? "Saving..." : editingPageantEvent ? "Save Contestant" : "Save photo"}
                 </button>
               </div>
             </form>
@@ -656,10 +725,11 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
               <tr>
                 <th className="p-3">Number</th>
                 <th className="p-3">Contestant Name</th>
+                {selectedIsPageant && <th className="p-3">Gender</th>}
                 <th className="p-3">Course / Year</th>
                 <th className="p-3">Assigned Competitions</th>
                 <th className="p-3">Status</th>
-                {isAdmin && <th className="p-3">Photo</th>}
+                {isAdmin && <th className="p-3">{selectedIsPageant ? "Actions" : "Photo"}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#17251d]/10">
@@ -681,6 +751,7 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                       </div>
                     </div>
                   </td>
+                  {selectedIsPageant && <td className="p-3 text-xs">{c.gender ?? "Gender required"}</td>}
                   <td className="p-3 text-xs">
                     {c.course} {c.year_level ? `• ${c.year_level}` : ""}{" "}
                     {c.section ? `• ${c.section}` : ""}
@@ -703,18 +774,20 @@ export default function ContestantsManager({ isAdmin }: { isAdmin: boolean }) {
                     <td className="p-3">
                       <button
                         type="button"
-                        aria-label={`${
+                        aria-label={c.event_contestants?.some(ec => isCcsPageant(ec.events?.name ?? "")) ? `Edit contestant ${c.full_name}` : `${
                           c.photo_path ? "Change" : "Add"
                         } photo for ${c.full_name}`}
                         onClick={() => {
                           setEditingPhoto(c)
+                          setEditGender(c.gender ?? "")
+                          setEditNumber(c.contestant_number)
                           setPhotoFile(null)
                           setPhotoRemoved(false)
                           setError("")
                         }}
                         className="whitespace-nowrap border border-[#17251d]/30 px-3 py-2 text-xs font-semibold hover:bg-[#e8edf2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2a3441]"
                       >
-                        {c.photo_path ? "Change photo" : "Add photo"}
+                        {c.event_contestants?.some(ec => isCcsPageant(ec.events?.name ?? "")) ? "Edit contestant" : c.photo_path ? "Change photo" : "Add photo"}
                       </button>
                     </td>
                   )}
